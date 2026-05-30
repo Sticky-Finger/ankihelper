@@ -1,0 +1,4 @@
+# 全局规则：自动检测并处理文本文件
+* text=auto
+# 核心规则：强制 Markdown 文件使用 LF 行尾
+text eol=lf
