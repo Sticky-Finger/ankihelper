@@ -11,7 +11,7 @@
 AnkiHelper (Anki 划词助手) 是一个功能丰富的 Android 应用程序，用于与 AnkiDroid 集成创建抽认卡。
 
 **项目统计:**
-- Java 源文件: 110 个
+- Java 源文件: 116 个
 - 代码量: 约 20,322 行
 - 版本: 2.30.7
 - 目标 SDK: 28 (Android 9 Pie)
@@ -27,27 +27,35 @@ AnkiHelper (Anki 划词助手) 是一个功能丰富的 Android 应用程序，�
 com.mmjang.ankihelper/
 ├── ui/                    # 表示层 - 用户界面组件
 │   ├── popup/            # 悬浮弹窗界面
-│   ├── launcher/         # 主界面
+│   ├── LauncherActivity  # 主界面（位于 ui/ 根目录）
 │   ├── plan/             # 方案管理界面
 │   ├── customdict/       # 自定义词典界面
 │   ├── content/          # 内容相关界面
 │   ├── about/            # 关于界面
 │   ├── stat/             # 统计界面
 │   ├── translation/      # 翻译界面
+│   ├── behaviour/        # 行为定义（ScrollAwareFABBehaviour）
 │   └── widget/           # 自定义组件
 │
 ├── domain/               # 业务逻辑层
 │   ├── CBWatcherService  # 剪贴板监控前台服务
-│   └── PronounceManager  # 发音管理器
+│   ├── PronounceManager  # 发音管理器
+│   ├── PlayAudioManager  # 音频播放管理器
+│   └── OnlockReceiver    # 锁屏接收器
 │
 ├── data/                 # 数据层
-│   ├── dict/             # 词典实现（22个内置词典）
+│   ├── dict/             # 词典实现（23个内置词典）
+│   │   ├── customdict/   # 自定义词典子包
+│   │   └── JPDeinflector/ # 日语动词变形子包
 │   ├── database/         # 数据库管理
 │   ├── plan/             # 输出方案配置
 │   ├── book/             # 电子书相关
 │   ├── model/            # 数据模型
 │   ├── content/          # 内容管理
-│   └── history/          # 历史记录
+│   ├── history/          # 历史记录
+│   ├── quote/            # 名言引用
+│   ├── read/             # 阅读位置
+│   └── Settings.java     # 全局配置单例
 │
 ├── anki/                 # AnkiDroid API 集成
 │   └── AnkiDroidHelper   # AnkiDroid API 封装
@@ -99,6 +107,8 @@ com.mmjang.ankihelper/
 **LauncherActivity.java** (477 行)
 **路径:** `app/src/main/java/com/mmjang/ankihelper/ui/LauncherActivity.java`
 
+**注意:** LauncherActivity 位于 ui/ 根目录下，而非 ui/launcher/ 子包中。
+
 **职责:**
 - 主设置入口
 - 管理剪贴板监控开关
@@ -123,11 +133,11 @@ com.mmjang.ankihelper/
 **路径:** `app/src/main/java/com/mmjang/ankihelper/data/dict/IDictionary.java`
 
 **定义的方法:**
-- `query(String word)` - 查询单词定义
-- `query(String word, int limit)` - 限制结果数量的查询
-- `getAutoCompleteResults(String word)` - 获取自动完成建议
-- `exportElements()` - 导出可配置元素
-- `lookup(String word, Context context)` - 带上下文的查询
+- `getDictionaryName()` - 获取词典名称
+- `getIntroduction()` - 获取词典简介
+- `getExportElementsList()` - 获取导出元素列表
+- `wordLookup(String key)` - 查询词汇定义，返回 List<Definition>
+- `getAutoCompleteAdapter(Context context, int layout)` - 获取自动完成适配器
 
 **DictionaryRegister.java**
 **路径:** `app/src/main/java/com/mmjang/ankihelper/data/dict/DictionaryRegister.java`
@@ -137,19 +147,19 @@ com.mmjang.ankihelper/
 - 通过反射动态加载词典实例
 - 维护词典类型和实例的映射关系
 
-#### 内置词典列表 (22个)
+#### 内置词典列表 (23个)
 
 **英语词典:**
 1. **Ode2** - 牛津英语词典（本地）
 2. **Collins** - 柯林斯词典（本地）
-3. **WebsterLearners** - 韦氏学习词典（在线）
-4. **BingOxford** - 必应牛津词典（在线）
-5. **VocabCom** - Vocabulary.com（在线）
-6. **DictionaryDotCom** - Dictionary.com（在线）
-7. **UrbanDict** - 城市词典（在线）
-8. **Longman** - 朗文词典（在线）
-9. **WordNet** - 普林斯顿词汇网络（在线）
-10. **FreeDict** - 自由词典（在线）
+3. **CollinsEnEn** - 柯林斯英英词典（本地）
+4. **WebsterLearners** - 韦氏学习词典（在线）
+5. **BingOxford** - 必应牛津词典（在线）
+6. **VocabCom** - Vocabulary.com（在线）
+7. **DictionaryDotCom** - Dictionary.com（在线）
+8. **UrbanDict** - 城市词典（在线）
+9. **YoudaoOnline** - 有道词典（在线）
+10. **SolrDictionary** - Solr 词典（在线）
 
 **多语言词典:**
 11. **Frdict** - 法语词典（欧路在线）
@@ -165,9 +175,13 @@ com.mmjang.ankihelper/
 17. **Cloze** - 挖空词典（用于填空练习）
 18. **Mnemonic** - 记忆术词典
 19. **IdiomDict** - 习语词典
-20. **PhraseDict** - 短语词典
-21. **SentenceDict** - 例句词典
-22. **PhoneticDict** - 音标词典
+20. **EudicSentence** - 欧路例句词典
+21. **RenRenCiDianSentence** - 人人词典例句
+22. **Dub91Sentence** - 91句例句词典
+23. **BingImage** - 必应图片词典
+
+**自定义词典:**
+- **CustomDictionary** - 用户导入的制表符分隔文本文件词典
 
 ---
 
@@ -180,11 +194,11 @@ com.mmjang.ankihelper/
 
 **职责:**
 - 外部数据库管理
-- 使用 SQLiteAssetHelper 管理预置数据库
+- 使用 SQLiteOpenHelper 管理数据库操作
 - 支持多数据源访问
 
 **LitePal ORM:**
-- 对象关系映射框架
+- 对象关系映射框架（版本 1.5.1）
 - 简化数据库操作
 - 自动处理表结构和数据迁移
 
@@ -335,8 +349,8 @@ com.mmjang.ankihelper/
 
 **查询流程:**
 1. 接收单词输入
-2. DictionaryRegistry 查找可用词典
-3. 调用每个词典的 query() 方法
+2. DictionaryRegister 查找可用词典
+3. 对每个词典调用 dict.wordLookup(word) 方法
 4. 合并结果并显示
 
 ### 卡片生成模块
@@ -518,8 +532,8 @@ UI 显示
 - 编译 SDK: 29 (Android 10)
 
 **数据库:**
-- LitePal 1.3.1 - ORM 框架
-- SQLiteAssetHelper - 预置数据库管理
+- LitePal 1.5.1 - ORM 框架
+- SQLiteOpenHelper - 数据库管理
 
 ### UI 框架
 
@@ -550,8 +564,8 @@ UI 显示
 ### 构建工具
 
 **Gradle:**
-- Android Gradle Plugin 3.5.0
-- Gradle Wrapper 5.4.1
+- Android Gradle Plugin 3.4.2
+- Gradle Wrapper 5.1.1
 
 **Maven 仓库:**
 - 阿里云镜像（加速国内构建）
@@ -572,10 +586,10 @@ UI 显示
 
 ### 2. 丰富的词典支持
 
-- 22 个内置词典
+- 23 个内置词典 + 自定义词典支持
 - 支持英语、法语、德语、西班牙语、日语
 - 本地词典和在线词典结合
-- 可导入自定义词典
+- 可导入自定义词典（制表符分隔 UTF-8 文本文件）
 
 ### 3. 灵活的方案系统
 
@@ -599,7 +613,7 @@ UI 显示
 
 ### 6. 多语言支持
 
-- 英语（11 个词典）
+- 英语（9 个词典 + BingImage + BingOxford）
 - 法语、德语、西班牙语（欧路词典）
 - 日语（3 个词典）
 
@@ -621,6 +635,8 @@ UI 显示
 - OkHttp 3.12.1（存在安全更新）
 - Kotlin 1.3.50（当前最新 1.9+）
 - Support Library v28（已迁移到 AndroidX）
+- Gradle Plugin 3.4.2 / Wrapper 5.1.1（版本较旧）
+- LitePal 1.5.1（已停止维护）
 
 **建议:** 更新依赖以提升安全性和性能
 
@@ -752,4 +768,4 @@ AnkiHelper 是一个结构良好、功能完整的 Android 应用程序，采用
 ---
 
 **文档生成:** Claude Code
-**最后更新:** 2026-01-01
+**最后更新:** 2026-05-31
