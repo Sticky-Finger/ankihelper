@@ -229,5 +229,50 @@ dictionarySpinner.setOnItemSelectedListener(
 
 ---
 
+## 已知问题：本地词典数据库文件缺失
+
+### 问题现象
+
+编译安装的 App 在"选择词典"下拉列表中找不到"柯林斯英汉双解"、"牛津词典"等本地词典选项，且没有任何错误提示。
+
+### 问题原因
+
+**根本原因：本地数据库文件缺失。** 具体链条如下：
+
+1. **Git 历史中删除了数据库文件** — 提交 `feddb3f`（2017-05-03）将 `collins.db` 和 `ode2_v2.db` 从 `app/src/main/assets/databases/` 目录中移除，并加入了 `.gitignore`
+2. **代码引用了新的文件名** — `Collins.java` 中 `DATABASE_NAME` 从 `"collins.db"` 改为了 `"collins_v2.db"`，但 git 中从未存在过 `collins_v2.db`
+3. **异常被静默吞掉** — `DictionaryRegister.getDictionaryObjectList()` 中，反射实例化词典时的 `catch` 块（第57-61行）捕获了 `InvocationTargetException` 后不做任何处理，导致 Collins 构造失败时没有任何报错提示，只是悄悄从列表中消失
+
+**触发流程：**
+```
+Collins 构造函数 → SQLiteAssetHelper → getReadableDatabase()
+→ 找不到 collins_v2.db → 抛出异常
+→ DictionaryRegister 静默捕获 → 词典未加入列表 → 用户看不到选项
+```
+
+### 解决办法
+
+从 git 历史中恢复数据库文件，放到当前代码期望的路径和文件名：
+
+```bash
+mkdir -p app/src/main/assets/databases/
+
+# collins.db 在代码中已改名为 collins_v2.db，需要重命名
+git show feddb3f~1:app/src/main/assets/databases/collins.db \
+    > app/src/main/assets/databases/collins_v2.db
+
+# ode2_v2.db 文件名未变，直接恢复
+git show feddb3f~1:app/src/main/assets/databases/ode2_v2.db \
+    > app/src/main/assets/databases/ode2_v2.db
+```
+
+### 验证结果
+
+恢复两个数据库文件后重新编译：
+- "柯林斯英汉双解"词典选项出现，且查询功能正常，与老版本表现一致
+- "牛津词典"（Ode2）选项同样出现，缺失的本地词典全部恢复正常
+
+---
+
 **文档生成:** Claude Code  
 **最后更新:** 2026-06-02
