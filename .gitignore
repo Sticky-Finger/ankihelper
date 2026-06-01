@@ -56,3 +56,6 @@ pom.xml.*
 
 # Readium DRM LCP
 liblcp.aar
+
+# 原始对话导出（包含未脱敏信息，禁止直接提交）
+chat-logs/
