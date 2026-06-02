@@ -277,5 +277,149 @@ public long getOutputDeckId() {
 
 ---
 
-**文档生成:** Claude Code  
+## 待解决问题：牌组列表过长查找不便
+
+### 问题现象
+
+当用户 AnkiDroid 中的牌组数量较多时（50+），方案编辑器中的"牌组"选择器下拉列表过长，用户需要滚动查找特定牌组，体验不佳。
+
+### 问题背景
+
+**根本原因：** 当前使用标准 Android `Spinner` 控件，下拉列表直接展示所有牌组，没有搜索或过滤功能。
+
+**影响范围：**
+- 拥有大量牌组的重度用户
+- 需要频繁切换牌组的场景
+- 牌组名称相似的查找场景
+
+---
+
+## 解决方案：对话框搜索
+
+### 方案概述
+
+保持原有 Spinner 控件不变，点击时弹出带有搜索框的对话框。对话框中显示可搜索过滤的牌组列表，用户选择后更新 Spinner 显示内容。
+
+### UI 交互流程
+
+```
+用户点击 Spinner
+    ↓
+弹出牌组选择对话框（DeckSelectionDialog）
+    ↓
+对话框顶部：搜索 EditText + RecyclerView 牌组列表
+    ↓
+用户输入关键字 → RecyclerView 过滤显示
+    ↓
+用户点击某个牌组
+    ↓
+关闭对话框，更新 Spinner 显示选中牌组，更新 currentDeckId
+```
+
+---
+
+### 涉及文件
+
+#### 需要新建的文件
+
+1. **`app/src/main/res/layout/dialog_deck_selection.xml`**
+   - 牌组选择对话框布局
+   - 包含搜索 EditText 和 RecyclerView
+
+2. **`app/src/main/res/layout/item_deck_selection.xml`**
+   - 牌组列表项布局
+
+3. **`app/src/main/java/com/mmjang/ankihelper/ui/plan/DeckSelectionDialog.java`**
+   - 牌组选择对话框类
+   - 封装搜索逻辑和列表展示
+
+4. **`app/src/main/java/com/mmjang/ankihelper/ui/plan/DeckSearchAdapter.java`**
+   - RecyclerView 适配器
+   - 实现搜索过滤功能
+
+#### 需要修改的文件
+
+5. **`app/src/main/java/com/mmjang/ankihelper/ui/plan/PlanEditorActivity.java`**
+   - 修改牌组 Spinner 点击事件，改为弹出对话框
+   - 添加对话框选择回调处理
+
+6. **`app/src/main/res/values/strings.xml`**
+   - 添加对话框相关字符串资源
+
+---
+
+### 核心实现要点
+
+#### 1. DeckSearchAdapter 核心过滤逻辑
+
+```java
+public void filter(String query) {
+    deckList.clear();
+    if (query.isEmpty()) {
+        deckList.addAll(originalList);
+    } else {
+        String lowerQuery = query.toLowerCase();
+        for (DeckItem item : originalList) {
+            if (item.getDeckName().toLowerCase().contains(lowerQuery)) {
+                deckList.add(item);
+            }
+        }
+    }
+    notifyDataSetChanged();
+}
+```
+
+#### 2. PlanEditorActivity 修改要点
+
+**移除原有监听器：**
+```java
+// 删除第 259-271 行的 deckSpinner.setOnItemSelectedListener(...)
+```
+
+**添加点击监听：**
+```java
+deckSpinner.setOnClickListener(new View.OnClickListener() {
+    @Override
+    public void onClick(View v) {
+        showDeckSelectionDialog();
+    }
+});
+```
+
+**显示当前选中牌组名称：**
+```java
+if (currentDeckId != 0 && deckList.containsKey(currentDeckId)) {
+    String currentDeckName = deckList.get(currentDeckId);
+    ArrayAdapter<String> displayAdapter = new ArrayAdapter<>(
+            PlanEditorActivity.this,
+            R.layout.support_simple_spinner_dropdown_item,
+            new String[]{currentDeckName});
+    deckSpinner.setAdapter(displayAdapter);
+}
+```
+
+---
+
+### 边界情况处理
+
+| 场景 | 处理方式 |
+|------|----------|
+| 牌组列表为空 | 对话框显示"暂无可用牌组"，禁用 Spinner |
+| 搜索无结果 | RecyclerView 显示空状态提示 |
+| 用户取消选择 | 对话框关闭，不更新当前选择 |
+| 初始无选中牌组 | Spinner 显示提示"请选择牌组" |
+| 屏幕旋转 | 保存 currentDeckId 到 savedInstanceState |
+
+---
+
+### 可选扩展
+
+1. **拼音搜索**：支持中文牌组名的拼音搜索
+2. **层级结构**：显示牌组的父子层级关系
+3. **最近使用**：添加"最近使用"快捷区域
+4. **正则搜索**：支持正则表达式匹配
+
+---
+
+**文档生成:** Claude Code
 **最后更新:** 2026-06-02
