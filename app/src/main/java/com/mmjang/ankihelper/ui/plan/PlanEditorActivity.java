@@ -12,6 +12,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -256,19 +257,19 @@ public class PlanEditorActivity extends AppCompatActivity {
                 }
         );
 
-        deckSpinner.setOnItemSelectedListener(
-                new AdapterView.OnItemSelectedListener() {
-                    @Override
-                    public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                        currentDeckId = Utils.getMapKeyArray(deckList)[position];
-                    }
-
-                    @Override
-                    public void onNothingSelected(AdapterView<?> parent) {
-
-                    }
+        // 设置牌组选择器触摸监听，拦截Spinner默认下拉，弹出搜索对话框
+        deckSpinner.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    showDeckSelectionDialog();
                 }
-        );
+                return true; // 消费事件，阻止Spinner默认下拉
+            }
+        });
+
+        // 显示当前选中的牌组名称
+        updateDeckSpinnerDisplay();
 
     }
 
@@ -300,6 +301,33 @@ public class PlanEditorActivity extends AppCompatActivity {
 
         fieldsSpinnersContainer.setLayoutManager(new LinearLayoutManager(this));
         fieldsSpinnersContainer.setAdapter(new FieldMapSpinnerListAdapter(PlanEditorActivity.this, fieldsMapItemList));
+    }
+
+    private void updateDeckSpinnerDisplay() {
+        if (currentDeckId != 0 && deckList.containsKey(currentDeckId)) {
+            String currentDeckName = deckList.get(currentDeckId);
+            ArrayAdapter<String> displayAdapter = new ArrayAdapter<>(
+                    PlanEditorActivity.this,
+                    R.layout.support_simple_spinner_dropdown_item,
+                    new String[]{currentDeckName});
+            deckSpinner.setAdapter(displayAdapter);
+        }
+    }
+
+    private void showDeckSelectionDialog() {
+        DeckSelectionDialog dialog = new DeckSelectionDialog(
+                this,
+                deckList,
+                currentDeckId,
+                new DeckSelectionDialog.OnDeckSelectedListener() {
+                    @Override
+                    public void onDeckSelected(long deckId, String deckName) {
+                        currentDeckId = deckId;
+                        updateDeckSpinnerDisplay();
+                    }
+                }
+        );
+        dialog.show();
     }
 
     @Override

@@ -4,6 +4,8 @@
     <string name="tv_plan_name">Plan Name:</string>
     <string name="title_activity_plan_editor">Plan Editor</string>
     <string name="tv_select_deck">Deck:</string>
+    <string name="hint_search_deck">搜索牌组...</string>
+    <string name="title_select_deck">选择牌组</string>
     <string name="tv_select_model">Model:</string>
     <string name="tv_choose_dictionary">Dictionary:</string>
     <string name="api_not_available_message">Api not available!</string>
