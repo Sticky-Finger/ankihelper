@@ -277,7 +277,7 @@ public long getOutputDeckId() {
 
 ---
 
-## 已知问题（已解决）：牌组列表过长查找不便
+## 已知问题1（已解决）：牌组列表过长查找不便
 
 ### 问题现象
 
@@ -344,6 +344,61 @@ public long getOutputDeckId() {
 - 选择牌组 → 对话框关闭，Spinner 更新显示选中名称 ✅
 - 编辑已有方案 → 牌组名称正确回显 ✅
 - 保存方案 → 牌组 ID 正确保存 ✅
+
+---
+
+## 已知问题2（待解决）：词典选择器选中长名称显示不全
+
+### 问题现象
+
+当选中一个名称较长的词典后（如自定义词典），词典选择器 Spinner 的选中项显示区域无法展示完整词典名称，文本被截断，用户无法看到当前选中的词典全名。
+
+### 问题原因
+
+**根本原因：** 词典 Spinner 使用标准 `R.layout.support_simple_spinner_dropdown_item` 单行布局，且 Spinner 在水平 LinearLayout 中仅占 `weight=6` 的宽度，水平空间有限，长名称被截断无法换行显示。
+
+**影响范围：**
+- 名称较长的词典（如自定义词典）
+- 小屏幕设备上所有词典选择器
+- 用户无法确认当前选中的词典是否正确
+
+### 解决方案：自定义选中项多行布局 + 调整布局权重
+
+为 Spinner 的选中项显示区域使用自定义多行布局，允许文本换行显示；同时调整水平布局权重，给 Spinner 更多空间。下拉列表保持标准单行布局不变。
+
+**UI 交互流程：**
+```
+选中长名称词典
+    ↓
+Spinner 选中项使用 custom_spinner_item 布局
+    ↓
+文本自动换行显示（最多3行）
+    ↓
+用户可完整看到选中词典全名
+    ↓
+点击下拉列表 → 使用标准单行布局（下拉空间足够）
+```
+
+### 涉及文件
+
+#### 新建文件
+
+| 文件 | 说明 |
+|------|------|
+| `app/src/main/res/layout/custom_spinner_item.xml` | Spinner 选中项多行布局 |
+
+#### 修改文件
+
+| 文件 | 修改内容 |
+|------|----------|
+| `app/src/main/java/com/mmjang/ankihelper/ui/plan/PlanEditorActivity.java` | `populateDictionary()` 方法：ArrayAdapter 使用自定义选中项布局，添加 `setDropDownViewResource()` 设置下拉布局 |
+| `app/src/main/res/layout/activity_plan_editor.xml` | 词典行：标签 weight 从4改为3，Spinner weight 从6改为7 |
+
+### 实现要点
+
+1. **自定义选中项布局**：创建 `custom_spinner_item.xml`，设置 `singleLine="false"`、`maxLines="3"`、`ellipsize="none"`，允许文本换行
+2. **分离选中项与下拉列表布局**：ArrayAdapter 构造函数使用 `custom_spinner_item`，`setDropDownViewResource()` 使用 `support_simple_spinner_dropdown_item`
+3. **调整布局权重**：词典行标签 weight=3、Spinner weight=7，给 Spinner 更多水平空间
 
 ---
 
