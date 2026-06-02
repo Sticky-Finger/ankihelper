@@ -158,7 +158,8 @@ public class PlanEditorActivity extends AppCompatActivity {
             dictionaryNameList[i] = dictionaryList.get(i).getDictionaryName();
         }
         ArrayAdapter<String> dictionarySpinnerAdapter = new ArrayAdapter<>(
-                this, R.layout.support_simple_spinner_dropdown_item, dictionaryNameList);
+                this, R.layout.custom_spinner_item, dictionaryNameList);
+        dictionarySpinnerAdapter.setDropDownViewResource(R.layout.support_simple_spinner_dropdown_item);
         dictionarySpinner.setAdapter(dictionarySpinnerAdapter);
 
         if (planForEdit != null) {
@@ -308,7 +309,7 @@ public class PlanEditorActivity extends AppCompatActivity {
             String currentDeckName = deckList.get(currentDeckId);
             ArrayAdapter<String> displayAdapter = new ArrayAdapter<>(
                     PlanEditorActivity.this,
-                    R.layout.support_simple_spinner_dropdown_item,
+                    R.layout.custom_spinner_item,
                     new String[]{currentDeckName});
             deckSpinner.setAdapter(displayAdapter);
         }
