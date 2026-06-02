@@ -662,6 +662,12 @@ UI 显示
 
 **解决方法:** 保持 AnkiDroid 在后台运行
 
+### 6. 方案编辑器选择器问题（已解决）
+
+- **问题：** 牌组列表过长导致查找不便，以及词典和牌组选中项长名称显示不全
+- **详情：** 详见 [方案编辑器牌组选择器组件分析文档](docs/component-analysis/PlanEditor_Deck_Selector_Analysis.md#已知问题1已解决牌组列表过长查找不便) 和 [同文档问题2](docs/component-analysis/PlanEditor_Deck_Selector_Analysis.md#已知问题2已解决词典选择器选中长名称显示不全)
+- **影响：** 方案编辑器的选择交互体验得到改善，长名称可完整显示
+
 ---
 
 ## 测试覆盖
