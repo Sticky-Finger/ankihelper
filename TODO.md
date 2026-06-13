@@ -1,0 +1,6 @@
+- [ ] ISSUE-[2026-0613-1134-OneClick_TwoCards_Cause_Analysis](./docs/bug-analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis.md)
+    - [ ] 分析其实现
+    - [ ] 学习用到的技术和代码
+    - [ ] 添加单元测试
+    - [ ] 按照《重构》的好代码的要求，重构优化代码
+    - [ ] 更改业务逻辑，改成：添加卡片时，可以选择其中一个或者两个都选去生成对应anki卡片

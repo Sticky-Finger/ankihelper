@@ -1,0 +1,151 @@
+ ▐▛███▜▌   Claude Code v2.1.148
+▝▜█████▛▘  qwen3.7-max-2026-05-20 · API Usage Billing
+  ▘▘ ▝▝    /media/wpw/D/DOCS/Codes/ankihelper
+
+❯ /clear                                                                        
+  ⎿  (no content)
+
+❯ /model qwen3.7-max                                                            
+  ⎿  Set model to qwen3.7-max for this session
+
+❯ /model qwen3.7-max                                                            
+  ⎿  Set model to qwen3.7-max for this session
+
+※ recap: This branch improves plan editor selectors — added search dialog for decks and multi-line display for long names in both deck and dictionary selectors. The project analysis doc is staged and ready for commit. (disable recaps in /config)
+
+❯ @PROJECT_ANALYSIS.md这个是项目文档，请参考它，尽量少的去看具体代码，来查看下  
+  一个问题的原因：为什么我用这个app添加一次卡片，会得到recite和type两个类型各一 
+  张卡片？                                                                      
+
+  Searched for 5 patterns, read 2 files (ctrl+o to expand)
+
+● 根据项目文档和 Anki 的工作机制，这个问题的原因不在 AnkiHelper 应用本身，而在
+  AnkiDroid 端的笔记类型（Note Type）配置。
+
+  原因分析
+
+  1. AnkiHelper 只添加一次笔记（note），不是卡片（card）
+
+  从代码看，PopupActivity.java:1279 中只调用了一次 addNote：
+
+  Long result = mAnkiDroid.getApi().addNote(modelId, deckId, exportFields,
+  mTagEditedByUser);
+
+  AnkiHelper 的工作到 addNote 就结束 — 它传递的是 modelId（笔记类型
+  ID）、deckId（牌组 ID）、字段内容和标签。它并不直接创建卡片，卡片是由
+  AnkiDroid 根据该笔记类型的"卡片模板"自动生成的。
+
+  2. 一个笔记类型可以有多个卡片模板
+
+  Anki 的核心机制：每条笔记（note）可对应多张卡片（card），每张卡片由一个卡片模
+  板（card template）定义。常见配置例如：
+
+  - 模板 1：recite（背诵卡）— 正面显示单词，背面显示释义
+  - 模板 2：type（打字卡 / type-in-the-answer）— 要求用户键入答案
+
+  你在方案（OutputPlan）中选择的"笔记类型"正是这种带双模板的类型，所以 AnkiDroid
+   收到一条笔记后，自动按模板生成了 recite 和 type 两张卡片。
+
+  3. 项目文档的印证
+
+  PROJECT_ANALYSIS.md 中关于输出方案系统的描述：
+
+  ▎ "方案"（Plans）是定义以下内容的配置：
+  ▎ - 使用的词典
+  ▎ - 目标牌组和笔记类型
+  ▎ - 字段映射
+  ▎ - 关联的标签
+
+  方案只决定"用哪个笔记类型"，不控制该笔记类型生成几张卡片 — 这完全由 AnkiDroid
+  中该笔记类型的模板数量决定。
+
+  解决方法
+
+  在 AnkiDroid 中修改笔记类型，三种方式任选其一：
+
+  1. 删除一个卡片模板：AnkiDroid → 笔记类型管理 → 选中你正在用的笔记类型 →
+  卡片模板 → 删掉 recite 或 type 其中一个。
+  2. 新建一个只有单模板的笔记类型，然后在 AnkiHelper
+  的方案编辑器里把"输出笔记类型"换成这个新的。
+  3. 如果你希望保留两种模板但不同时生成，可考虑为两种用途分别做两个方案，在
+  AnkiHelper 中按需切换。
+
+  简言之：AnkiHelper 没有重复添加，"一次操作出两张卡"是 Anki
+  笔记类型多模板机制的正常表现。
+
+✻ Sautéed for 36s
+
+❯ 我删掉type类型模板之后，再也添加不回来删掉的tpye类型模板了。当前项目是怎样给a 
+  nkidroid添加模板的？                                                          
+
+● 让我查看 AnkiHelper 是如何与 AnkiDroid 的模板（笔记类型）交互的。
+
+  Searched for 3 patterns, read 1 file (ctrl+o to expand)
+
+● 让我查找 AnkiHelper 是否有创建笔记类型（model）的代码。
+
+  Searched for 4 patterns, read 1 file (ctrl+o to expand)
+
+● 找到关键文件了！让我查看这两个文件。
+
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+● 现在完全清楚了。以下是 AnkiHelper 给 AnkiDroid
+  添加卡片模板的完整机制，以及你无法恢复 type 模板的原因。
+
+  模板创建机制
+
+  整个流程涉及两个核心文件：
+
+  1. VocabularyCardModel.java — 定义模板内容
+
+  app/src/main/java/com/mmjang/ankihelper/data/plan/VocabularyCardModel.java
+
+  String[] Cards = {"recite", "type"};   // ← 两个卡片模板
+  String[] QFMT = new String[2];         // 每个模板的正面(问题) HTML
+  String[] AFMT = new String[2];         // 每个模板的背面(答案) HTML
+  String CSS;                            // 共享样式
+
+  模板的 HTML 内容从 assets/vocabulary_card_model.html 文件中读取，用 @@@ 分隔成
+   5 段：recite 正面、recite 背面、type 正面、type 背面、CSS。
+
+  2. DefaultPlan.java — 在 AnkiDroid 中创建笔记类型
+
+  app/src/main/java/com/mmjang/ankihelper/data/plan/DefaultPlan.java:76-92
+
+  long getDefaultModelId(){
+      Long mid = mAnkidroid.findModelIdByName(DEFAULT_VOCABULARY_MODEL_NAME,
+  VocabularyCardModel.FILEDS.length);
+      if (mid == null) {
+          // 找不到时才创建
+          vc = new VocabularyCardModel(mContext);
+          mid = mAnkidroid.getApi().addNewCustomModel(
+              "划词助手Antimoon模板",
+              vc.FILEDS, vc.Cards, vc.QFMT, vc.AFMT, vc.CSS, null, null);
+      }
+      return mid;
+  }
+
+  逻辑是：
+  1. 先在 AnkiDroid 中查找名为 "划词助手Antimoon模板" 且字段数为 7 的笔记类型
+  2. 找到了 → 直接返回其 ID，不会检查模板是否完整
+  3. 找不到 → 调用 addNewCustomModel 创建包含 recite + type 两个模板的新笔记类型
+
+  为什么删掉 type 后无法恢复
+
+  问题就出在上面第 2 步：你在 AnkiDroid 里删掉了 type 模板，但笔记类型
+  "划词助手Antimoon模板"本身仍然存在（只是从 2 个模板变成了 1
+  个）。findModelIdByName 按名称查找时仍能找到它，于是直接返回已有
+  ID，跳过了创建流程 — type 模板永远不会被重新添加。
+
+  解决方法
+
+  最简单的办法：在 AnkiDroid 中把整个笔记类型"划词助手Antimoon模板"删掉（先删掉
+  使用该类型的所有卡片/笔记，然后才能删除笔记类型）。下次 AnkiHelper
+  创建默认方案时，findModelIdByName 返回 null，就会重新调用
+  addNewCustomModel，recite 和 type 两个模板就都恢复了。
+
+✻ Crunched for 45s
+
+❯ /model qwen3.7-plus                                                           
+  ⎿  Set model to qwen3.7-plus for this session
