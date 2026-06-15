@@ -1,0 +1,716 @@
+ ▐▛███▜▌   Claude Code v2.1.148
+▝▜█████▛▘  glm-5.2 · API Usage Billing
+  ▘▘ ▝▝    /media/wpw/D/DOCS/Codes/ankihelper
+
+❯ /model glm-5.2[1m]                                                            
+  ⎿  Set model to glm-5.2[1m] for this session
+
+❯ @docs/project-analysis/How-to-run.md refering to this doc, tell me how to     
+  build the production app. And I found something not as I wished: its name     
+  unexpectly partly consists of the old verson number when building a debug     
+  version app                                                                   
+  ⎿  Read docs/project-analysis/How-to-run.md (78 lines)
+
+  Read 1 file, listed 1 directory (ctrl+o to expand)
+
+● 现在我来查看一下构建设置，以了解构建过程和应用命名问题。
+
+  Searched for 3 patterns, read 3 files (ctrl+o to expand)
+
+● 我已阅读文档并核查了构建配置。以下是回答：
+
+  一、构建正式版（Release）APK
+
+  根据 How-to-run.md，文档只展示了 Debug 构建。生产构建（Release） 步骤如下：
+
+  # 1. 设置 JDK 11 环境
+  export JAVA_HOME=/media/wpw/D/ubuntu_docs/APPs/JDK/jdk-11.0.31+11
+  export PATH=$JAVA_HOME/bin:$PATH
+
+  # 2. 修复 gradlew 行尾符（如需要）
+  sed -i 's/\r$//' gradlew && chmod +x gradlew
+
+  # 3. 构建 Release APK（使用全局 gradle，不要用 ./gradlew）
+  gradle assembleRelease
+
+  输出位置：
+  app/build/outputs/apk/release/app-release-unsigned.apk
+
+  ⚠️ 重要提醒：当前 app/build.gradle 的 release 块未配置签名（参见
+  app/build.gradle:17-21），因此只能生成未签名的
+  APK，无法直接安装到设备上。要构建可安装的生产版本，需要补充签名配置：
+
+  // 在 app/build.gradle 的 android {} 块内添加
+  signingConfigs {
+      release {
+          storeFile file("路径/到/your.keystore")
+          storePassword "你的密码"
+          keyAlias "你的别名"
+          keyPassword "你的密码"
+      }
+  }
+  buildTypes {
+      release {
+          signingConfig signingConfigs.release
+          minifyEnabled false
+          proguardFiles getDefaultProguardFile('proguard-android.txt'),
+  'proguard-rules.pro'
+      }
+  }
+
+  ---
+  二、关于 Debug APK 名称包含旧版本号的问题
+
+  这不是 Bug，是 有意配置 的行为。根源在 app/build.gradle:14：
+
+  setProperty("archivesBaseName", "Anki 划词助手" + " " + versionName)
+
+  这行代码把 APK 文件名的基础部分设为 "Anki 划词助手 2.30.7"（其中 2.30.7
+  来自根目录 build.gradle:42 的 VERSION_NAME）。Gradle
+  会自动追加构建类型后缀，因此：
+
+  ┌──────────┬───────────────────────────────────────────┐
+  │ 构建类型 │              实际 APK 文件名              │
+  ├──────────┼───────────────────────────────────────────┤
+  │ Debug    │ Anki 划词助手 2.30.7-debug.apk            │
+  ├──────────┼───────────────────────────────────────────┤
+  │ Release  │ Anki 划词助手 2.30.7-release-unsigned.apk │
+  └──────────┴───────────────────────────────────────────┘
+
+  区分两个"名字"
+
+  1. APK 文件名：受 archivesBaseName 控制，包含版本号 —— 这就是你看到的现象。
+  2. 设备上显示的应用名称：由 app/src/main/res/values/strings.xml 中的 app_name 
+  = "Anki Helper" 决定，不会包含版本号。
+
+  如果你想去掉文件名中的版本号
+
+  只需修改 app/build.gradle:14，例如：
+
+  // 方案 A：完全去掉版本号
+  setProperty("archivesBaseName", "Anki 划词助手")
+
+  // 方案 B：只在 Release 中保留版本号
+  setProperty("archivesBaseName", "Anki 划词助手" + "-" + versionName)
+
+  是否需要我帮你直接修改这一行？或者你需要我帮你为 Release
+  构建补充完整的签名配置？
+
+✻ Crunched for 1m 5s
+
+※ recap: You asked how to build the production app and why the debug APK filename includes the version number. Next step: tell me whether to remove the version number from app/build.gradle:14 and whether to add release signing config. (disable recaps in /config)
+
+❯ 我按照你给的命令的确得到的是unsigned版本。要怎么养变成签名版？                
+
+● 我先检查项目里是否已有 keystore 或相关签名配置。
+
+  Searched for 1 pattern, read 1 file, listed 4 directories (ctrl+o to expand)
+
+● 我已检查项目状态。关键发现：
+  - 项目当前没有任何 keystore 文件（未纳入 git）
+  - app/build.gradle 完全没有签名配置
+  - 但历史目录 app/release/ 里有个 Anki 划词助手 
+  2.30.7-release.apk（6.7MB），说明之前有人签过名 —— 但那个 keystore 不在仓库里
+  - 可用工具齐全：JDK 11（含 keytool/jarsigner）+ Android build-tools 29.0.2 / 
+  36.1.0 / 37.0.0（含 apksigner/zipalign）
+
+  ⚠️ 重要前提：由于这是开源项目且当前仓库没有原
+  keystore，你只能用新签名。这意味着：
+  - 老版本（他人用原签名发布的）无法直接被你的新签名版本覆盖升级 —— 必须先卸载
+  - 如果只在自用/测试，新建 keystore 完全没问题
+
+  下面给出完整流程。
+
+  ---
+  第一步：生成你的专属 keystore（只需做一次）
+
+  cd /media/wpw/D/DOCS/Codes/ankihelper
+
+  /media/wpw/D/ubuntu_docs/APPs/JDK/jdk-11.0.31+11/bin/keytool -genkeypair \
+    -keystore ankihelper.jks \
+    -alias ankihelper \
+    -keyalg RSA -keysize 2048 -validity 36500 \
+    -storepass 123456 -keypass 123456 \
+    -dname "CN=AnkiHelper, OU=Dev, O=Personal, L=Beijing, ST=Beijing, C=CN"
+
+  参数说明：
+  - -keystore ankihelper.jks — keystore 文件路径（生成在项目根目录）
+  - -alias ankihelper — 别名，后续引用用
+  - -validity 36500 — 100 年有效期，避免过期
+  - -storepass / -keypass — 密码（这里示例用 123456，正式使用请换成强密码）
+  - -dname — 证书主体信息，按需修改
+
+  执行后会在项目根目录生成
+  ankihelper.jks。此文件务必妥善备份，丢了就无法再给同款 app 升级。
+
+  ---
+  第二步（推荐）：让 Gradle 自动签名
+
+  修改 app/build.gradle，在 android {} 块里加 signingConfigs，并把 release 的
+  signingConfig 指过去。
+
+  我建议不要把密码硬编码进 build.gradle（会进 git），改用读取环境变量或
+  keystore.properties 文件。下面用 keystore.properties 方案：
+
+  2.1 在项目根目录新建 keystore.properties（不进 git）
+
+  storeFile=ankihelper.jks
+  storePassword=123456
+  keyAlias=ankihelper
+  keyPassword=123456
+
+  并把它加进 .gitignore：
+
+  echo "keystore.properties" >> /media/wpw/D/DOCS/Codes/ankihelper/.gitignore
+  echo "*.jks" >> /media/wpw/D/DOCS/Codes/ankihelper/.gitignore
+
+  2.2 修改 app/build.gradle
+
+  把第 1 行之后、android { 块之前加入读取代码，并在 android {} 内加入
+  signingConfigs，再修改 buildTypes.release。
+
+  我可以直接帮你改。改动如下：
+
+  // 在文件顶部（apply plugin 之后）新增：
+  def keystoreProperties = new Properties()
+  def keystorePropertiesFile = rootProject.file("keystore.properties")
+  if (keystorePropertiesFile.exists()) {
+      keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+  }
+
+  android {
+      // ... 原有 defaultConfig 不变 ...
+
+      signingConfigs {
+          release {
+              if (keystoreProperties != null) {
+                  storeFile file(keystoreProperties['storeFile'])
+                  storePassword keystoreProperties['storePassword']
+                  keyAlias keystoreProperties['keyAlias']
+                  keyPassword keystoreProperties['keyPassword']
+              }
+          }
+      }
+
+      buildTypes {
+          release {
+              signingConfig signingConfigs.release
+              minifyEnabled false
+              proguardFiles getDefaultProguardFile('proguard-android.txt'),
+  'proguard-rules.pro'
+          }
+      }
+      // ... 其余不变 ...
+  }
+
+  2.3 重新构建
+
+  gradle assembleRelease
+
+  输出文件会变成 app/build/outputs/apk/release/Anki 划词助手 
+  2.30.7-release.apk（已签名），可以直接 adb install 到设备。
+
+  ---
+  第三步（备选）：手动签名（不动 build.gradle）
+
+  如果你不想改 build.gradle，可以对已经生成出来的 app-release-unsigned.apk
+  手动签名：
+
+  cd /media/wpw/D/DOCS/Codes/ankihelper
+
+  BT=/media/wpw/D/ubuntu_docs/Android/Sdk/build-tools/29.0.2
+  APK_IN=app/build/outputs/apk/release/app-release-unsigned.apk
+  APK_ALIGNED=app/build/outputs/apk/release/app-release-aligned.apk
+  APK_OUT=app/build/outputs/apk/release/Anki划词助手-2.30.7-release.apk
+
+  # 1. 对齐（zipalign 必须在签名之前做，使用 v1 签名时；v2/v3 则需先签名再对齐）
+  $BT/zipalign -v -p 4 "$APK_IN" "$APK_ALIGNED"
+
+  # 2. 用 apksigner 签名（v1+v2+v3 全开，兼容所有 Android 版本）
+  $BT/apksigner sign \
+    --ks ankihelper.jks \
+    --ks-pass pass:123456 \
+    --ks-key-alias ankihelper \
+    --key-pass pass:123456 \
+    --out "$APK_OUT" \
+    "$APK_ALIGNED"
+
+  # 3. 验证签名
+  $BT/apksigner verify --verbose "$APK_OUT"
+
+  ---
+  我的建议
+
+  推荐方案：第二步（Gradle 自动签名）。理由：
+  1. 一次配置，以后 gradle assembleRelease 直接出签名包
+  2. 密码通过 keystore.properties 与代码隔离，不进 git
+  3. IDE（Android Studio）也能直接用 Build > Generate Signed Bundle/APK
+  走同一套配置
+
+  是否需要我直接帮你修改 app/build.gradle？ 修改前我会先确认你想用
+  keystore.properties 方式还是环境变量方式。
+
+✻ Brewed for 1m 18s
+
+※ recap: 目标：构建 AnkiHelper 签名版 release APK。当前任务：配置签名（项目无 keystore）。下一步：生成 keystore 并修改 app/build.gradle 加入 signingConfig。 (disable recaps in /config)
+
+❯ 用keystore.properties方式，修改app/build.gradle                               
+
+● 我来修改 app/build.gradle，分两处编辑：先加入 keystore.properties
+  读取逻辑，再加入 signingConfigs 并把 release 指过去。
+
+● Update(app/build.gradle)
+  ⎿  Added 7 lines
+       1  apply plugin: 'com.android.application'
+       2  
+       3 +// 从根目录的 keystore.properties 读取签名配置（该文件不应进入 
+         +版本控制）                                                     
+       4 +def keystoreProperties = new Properties()                      
+       5 +def keystorePropertiesFile = rootProject.file("keystore.propert
+         +ies")                                                          
+       6 +if (keystorePropertiesFile.exists()) {                         
+       7 +    keystoreProperties.load(new FileInputStream(keystorePropert
+         +iesFile))                                                      
+       8 +}                                                              
+       9 +                                                               
+      10  android {
+      11      compileSdkVersion ANDROID_COMPILE_SDK_VERSION
+      12      buildToolsVersion '29.0.2'
+
+● Update(app/build.gradle)
+  ⎿  Added 14 lines
+      20          multiDexEnabled true
+      21          setProperty("archivesBaseName", "Anki 划词助手" + " " +
+           versionName)
+      22      }
+      23 +    // Release 签名配置：仅当 keystore.properties 存在时才注入 
+         +凭据，                                                         
+      24 +    // 这样未配置签名的开发者仍能正常构建 Debug 版本           
+      25 +    signingConfigs {                                           
+      26 +        release {                                              
+      27 +            if (keystorePropertiesFile.exists()) {             
+      28 +                storeFile file(keystoreProperties['storeFile'])
+      29 +                storePassword keystoreProperties['storePassword
+         +']                                                             
+      30 +                keyAlias keystoreProperties['keyAlias']        
+      31 +                keyPassword keystoreProperties['keyPassword']  
+      32 +            }                                                  
+      33 +        }                                                      
+      34 +    }                                                          
+      35 +                                                               
+      36      buildTypes {
+      37          release {
+      38 +            signingConfig signingConfigs.release               
+      39              minifyEnabled false
+      40              proguardFiles getDefaultProguardFile('proguard-andr
+          oid.txt'), 'proguard-rules.pro'
+      41          }
+
+● 修改完成。下面是改动后的关键片段：
+
+  apply plugin: 'com.android.application'
+
+  // 从根目录的 keystore.properties 读取签名配置（该文件不应进入版本控制）
+  def keystoreProperties = new Properties()
+  def keystorePropertiesFile = rootProject.file("keystore.properties")
+  if (keystorePropertiesFile.exists()) {
+      keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+  }
+
+  android {
+      // ... defaultConfig 不变 ...
+
+      // Release 签名配置：仅当 keystore.properties 存在时才注入凭据，
+      // 这样未配置签名的开发者仍能正常构建 Debug 版本
+      signingConfigs {
+          release {
+              if (keystorePropertiesFile.exists()) {
+                  storeFile file(keystoreProperties['storeFile'])
+                  storePassword keystoreProperties['storePassword']
+                  keyAlias keystoreProperties['keyAlias']
+                  keyPassword keystoreProperties['keyPassword']
+              }
+          }
+      }
+
+      buildTypes {
+          release {
+              signingConfig signingConfigs.release
+              minifyEnabled false
+              proguardFiles getDefaultProguardFile('proguard-android.txt'),
+  'proguard-rules.pro'
+          }
+      }
+  }
+
+  设计要点：用 keystorePropertiesFile.exists() 而非 keystoreProperties != null
+  做判断，因为前者能正确识别"还没创建配置文件"的情况，避免 Gradle 试图读 null
+  引发构建失败。这样别人 clone 项目但没建 keystore.properties 时，仍能正常跑
+  Debug 构建，只有 Release 会被注入签名。
+
+  ---
+  接下来你需要做的 3 步
+
+  1. 生成 keystore（如果还没生成）
+
+  cd /media/wpw/D/DOCS/Codes/ankihelper
+
+  /media/wpw/D/ubuntu_docs/APPs/JDK/jdk-11.0.31+11/bin/keytool -genkeypair \
+    -keystore ankihelper.jks \
+    -alias ankihelper \
+    -keyalg RSA -keysize 2048 -validity 36500 \
+    -storepass 123456 -keypass 123456 \
+    -dname "CN=AnkiHelper, OU=Dev, O=Personal, L=Beijing, ST=Beijing, C=CN"
+
+  2. 在项目根目录创建 keystore.properties
+
+  cat > /media/wpw/D/DOCS/Codes/ankihelper/keystore.properties <<'EOF'
+  storeFile=ankihelper.jks
+  storePassword=123456
+  keyAlias=ankihelper
+  keyPassword=123456
+  EOF
+
+  3. 把敏感文件加进 .gitignore
+
+  grep -q '^keystore.properties$' /media/wpw/D/DOCS/Codes/ankihelper/.gitignore
+  || \
+    printf '\n# 签名相关\nkeystore.properties\n*.jks\n*.keystore\n' >>
+  /media/wpw/D/DOCS/Codes/ankihelper/.gitignore
+
+  4. 构建签名版
+
+  gradle assembleRelease
+
+  输出在 app/build/outputs/apk/release/ 下，文件名是 Anki 划词助手 
+  2.30.7-release.apk，已签名可直接安装。
+
+  ---
+  是否需要我帮你：
+  - ✅ 直接帮你跑步骤 1~3（生成 keystore + 创建 properties + 更新 .gitignore）？
+  - 还是你自己手动跑，然后只让我帮你跑最后的 gradle assembleRelease？
+
+  ⚠️ 另外提醒：示例密码 123456
+  仅为演示。如果将来要正式分发，建议换成强密码并备份 ankihelper.jks
+  到安全位置（一旦丢失，已安装该签名的 app 将无法被任何后续版本升级）。
+
+✻ Crunched for 44s
+
+❯ 都帮我做下                                                                    
+
+● 并行执行三个步骤。
+● Bash(/media/wpw/D/ubuntu_docs/APPs/JDK/jdk-11.0.31+11/bin/keytool -genkeypair
+      \
+        -keystore ankihelper.jks \…)
+  ⎿  ---
+     -rwxr-xr-x 1 wpw wpw 2736 Jun 15 02:06 ankihelper.jks
+
+● Write(keystore.properties)
+  ⎿  Wrote 4 lines to keystore.properties
+      1 storeFile=ankihelper.jks
+      2 storePassword=123456
+      3 keyAlias=ankihelper
+      4 keyPassword=123456
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● 三步全部成功。现在快速验证 git 忽略是否生效，然后开始构建 Release APK。
+
+● Bash(echo "=== git status (应忽略 jks/properties) ===" && \
+      git status --short 2>&1 | head -20 && \…)
+  ⎿  === git status (应忽略 jks/properties) ===
+      M .gitignore
+      M app/build.gradle
+     … +18 lines (ctrl+o to expand)
+
+● Bash(\
+      export JAVA_HOME=/media/wpw/D/ubuntu_docs/APPs/JDK/jdk-11.0.31+11 && \…)
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ 构建我自己手动来                                                              
+
+● 好的，前面三步已全部完成并验证：
+
+  - ✅ ankihelper.jks 已生成（PKCS12 格式，有效期到 2126-05-22）
+  - ✅ keystore.properties 已创建
+  - ✅ .gitignore 已忽略 keystore.properties / *.jks / *.keystore
+  - ✅ git status 确认 jks/properties 不会被提交（只剩 .gitignore 和
+  app/build.gradle 两处改动）
+
+  ---
+  你需要手动跑的构建命令
+
+  cd /media/wpw/D/DOCS/Codes/ankihelper
+
+  # JDK 11 环境
+  export JAVA_HOME=/media/wpw/D/ubuntu_docs/APPs/JDK/jdk-11.0.31+11
+  export PATH=$JAVA_HOME/bin:$PATH
+
+  # 构建
+  gradle assembleRelease
+
+  构建成功后验证签名
+
+  # 查看输出文件
+  ls -la app/build/outputs/apk/release/
+
+  # 验证签名（应显示 "Verifies" 和使用 v1/v2/v3 scheme）
+  /media/wpw/D/ubuntu_docs/Android/Sdk/build-tools/29.0.2/apksigner verify
+  --verbose \
+    "app/build/outputs/apk/release/Anki 划词助手 2.30.7-release.apk"
+
+  安装到设备
+
+  adb install -r "app/build/outputs/apk/release/Anki 划词助手 
+  2.30.7-release.apk"
+
+  ⚠️ 注意：如果设备上已存在不同签名的同名 app（例如老的开源版本），adb install
+  会因签名冲突失败。需要先 adb uninstall com.mmjang.ankihelper 再装。
+
+  构建过程中如遇到任何报错，把错误贴给我帮你看。
+
+✻ Baked for 13s
+
+❯ 你尝试下命令编译下。我当前的命令行对于JAVA_HOME环境变量在.bashrc里早就配置好  
+  了                                                                            
+
+● 直接跑构建。
+
+● Bash(echo "JAVA_HOME=$JAVA_HOME" && java -version 2>&1 && echo "---" && gradle
+       --version 2>&1 | head -10)
+  ⎿  JAVA_HOME=/media/wpw/D/ubuntu_docs/APPs/JDK/jdk-11.0.31+11
+     openjdk version "11.0.31" 2026-04-21
+     OpenJDK Runtime Environment Temurin-11.0.31+11 (build 11.0.31+11)
+     … +13 lines (ctrl+o to expand)
+
+● Bash(gradle assembleRelease 2>&1 | tail -80)
+  ⎿  > Task :app:preBuild UP-TO-DATE
+     > Task :app:preReleaseBuild UP-TO-DATE
+     > Task :app:compileReleaseAidl NO-SOURCE
+     … +29 lines (ctrl+o to expand)
+
+● 构建失败，根因找到了：keystore 路径解析错位。
+
+  报错关键行：
+  Keystore file '/media/wpw/D/DOCS/Codes/ankihelper/app/ankihelper.jks' not
+  found
+
+  实际 keystore 在项目根目录 ankihelper.jks，但 Gradle 找的是
+  app/ankihelper.jks。原因是 app/build.gradle 里的 file(...) 是相对当前 
+  build.gradle 文件所在目录（即 app/），而不是项目根目录。
+
+  修复：把 storeFile file(...) 改成 storeFile 
+  rootProject.file(...)，让路径相对项目根目录解析（和上面读取
+  keystore.properties 的逻辑保持一致）。
+
+● Update(app/build.gradle)
+  ⎿  Added 1 line, removed 1 line
+      25      signingConfigs {
+      26          release {
+      27              if (keystorePropertiesFile.exists()) {
+      28 -                storeFile file(keystoreProperties['storeFile'])
+      28 +                storeFile rootProject.file(keystoreProperties['
+         +storeFile'])                                                   
+      29                  storePassword keystoreProperties['storePassword
+          ']
+      30                  keyAlias keystoreProperties['keyAlias']
+      31                  keyPassword keystoreProperties['keyPassword']
+
+● Bash(gradle assembleRelease 2>&1 | tail -40)
+  ⎿  > Task :app:preReleaseBuild UP-TO-DATE
+     > Task :app:compileReleaseAidl NO-SOURCE
+     > Task :app:compileReleaseRenderscript NO-SOURCE
+     … +26 lines (ctrl+o to expand)
+  ⎿  (timeout 10m)
+
+● 构建成功！现在验证 APK 文件和签名是否真的写入了。
+
+● Bash(echo "=== 输出目录文件 ===" && \
+      ls -la app/build/outputs/apk/release/ && \…)
+  ⎿  === 输出目录文件 ===
+     total 84000
+     drwxr-xr-x 1 wpw wpw        0 Jun 15 02:10 .
+     … +131 lines (ctrl+o to expand)
+
+● 🎉 构建成功！签名版 Release APK 已生成。
+
+  构建结果
+
+  ┌───────────────────────┬─────────────────────────────────────────────────┐
+  │         项目          │                      状态                       │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 输出文件              │ app/build/outputs/apk/release/Anki 划词助手     │
+  │                       │ 2.30.7-release.apk                              │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 文件大小              │ 43 MB（43,056,033 字节）                        │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ v1 签名（JAR）        │ ✅ true                                         │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ v2 签名（APK          │ ✅ true                                         │
+  │ Signature Scheme v2） │                                                 │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ v3 签名               │ ❌ false（不影响使用）                          │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 签名者数量            │ 1                                               │
+  └───────────────────────┴─────────────────────────────────────────────────┘
+
+  v3 为 false 不影响：v1+v2 已覆盖 Android 全部版本（Android 7.0+ 用
+  v2，更老的用 v1）。v3 主要是为了支持密钥轮换，未配置也完全正常。
+
+  关于 META-INF 警告
+
+  那一长串 WARNING: META-INF/xxx not protected by signature
+  完全无害，可以忽略。原因：
+  - 这些是依赖库（androidx、kotlin-stdlib、fetch2 等）自带的元数据文件（如
+  .version、.kotlin_module、README）
+  - 它们不是 Android 运行时加载的代码，不影响 app 功能
+  - Android 系统安装器只校验核心代码签名，不会因这些警告拒绝安装
+
+  如果想消掉这些警告（让输出更干净），可以在 app/build.gradle 的
+  packagingOptions 里排除掉它们：
+
+  packagingOptions {
+      exclude 'META-INF/proguard/androidx-annotations.pro'
+      exclude 'META-INF/*.version'
+      exclude 'META-INF/*.kotlin_module'
+      exclude 'META-INF/CHANGES'
+      exclude 'META-INF/README'
+  }
+
+  但这纯属"美化输出"，不影响功能。
+
+  安装到设备
+
+  adb install -r "app/build/outputs/apk/release/Anki 划词助手 
+  2.30.7-release.apk"
+
+  如果之前装过其他签名的同款 app，需要先 adb uninstall com.mmjang.ankihelper。
+
+  本次会话改动总结
+
+  - ✏️ app/build.gradle — 加 keystoreProperties
+  读取、signingConfigs.release、release 签名配置；用 rootProject.file() 解析 jks
+   路径
+  - 📄 新增 keystore.properties（不入库）
+  - 🔑 新增 ankihelper.jks（不入库）
+  - 📝 .gitignore 新增 keystore.properties / *.jks / *.keystore
+
+  后续再次构建签名包，直接 gradle assembleRelease 即可。
+
+✻ Cogitated for 1m 10s
+
+❯ 关于如何编译出生产版本的apk,你根据 @docs/project-analysis/How-to-run.md       
+  的风格和格式，写一份how-to-build文档，就保存在同级目录                        
+  ⎿  Read docs/project-analysis/How-to-run.md (78 lines)
+
+● 按照 How-to-run.md 的风格写一份生产构建指南。
+
+● Write(docs/project-analysis/How-to-build.md)  ⎿  Wrote 161 lines to docs/project-analysis/How-to-build.md
+       2 # AnkiHelper 生产版本构建指南
+       3 本文档说明如何构建已签名的 Release APK（即可分发、可安装到设备的
+         md)。 本）。如仅需调试版本，请参考 [How-to-run.md](./How-to-run.
+       4 
+       6 ## 前置要求
+       7 1. **JDK 11** — 与 Debug 构建相同
+         r` 与 `zipalign`） — 需包含 `build-tools/29.0.2`（提供 `apksigne
+       9 3. **Gradle 5.1.1** — 使用全局 Gradle（不要用 `./gradlew`，原因
+      10 4. **Debug 构建环境已就绪** — 即 How-to-run.md 中的环境变量、`gr
+         adlew` 行尾符修复等步骤已完成
+     … +173 lines (ctrl+o to expand)
+
+  Listed 1 directory (ctrl+o to expand)
+
+● 文档已创建：docs/project-analysis/How-to-build.md（5.3 KB），与原
+  How-to-run.md 并列。
+
+  文档结构
+
+  延续了 How-to-run.md 的风格（中文、代码块为主、>
+  引用块标注意事项、命令直接可复制），覆盖：
+
+  1. 前置要求 — JDK / SDK / Gradle / Debug 环境
+  2. 一次性配置（4 步） — 生成
+  keystore、keystore.properties、.gitignore、build.gradle 配置确认
+  3. 构建命令 — gradle assembleRelease
+  4. 输出位置 — Anki 划词助手 2.30.7-release.apk
+  5. 验证签名 — apksigner verify
+  6. 安装到设备 — adb install
+  7. 注意事项 — 签名冲突、META-INF 警告、keystore 备份、密码安全
+  8. 故障排查 — 把本次会话踩过的 4 个坑都写进去了（keystore
+  路径解析、validateSigning 失败、签名冲突、unsigned apk）
+
+  文件名 How-to-build.md 遵循了 CLAUDE.md 的英文命名规范，与 How-to-run.md
+  形成互补关系（一个调试版、一个生产版）。
+
+✻ Sautéed for 52s
+
+※ recap: Goal: build a signed production APK for AnkiHelper. Done: configured keystore.properties signing in app/build.gradle and generated How-to-build.md. Next: user runs gradle assembleRelease themselves to produce the signed release APK. (disable recaps in /config)
+
+❯ 好的。现在我要手动提交，给我个合适的git commit信息                            
+
+● 先查看当前改动和项目 commit 风格。
+
+● Bash(git status)
+  ⎿  位于分支 250618_selection_filter
+     尚未暂存以备提交的变更：
+       （使用 "git add <文件>..." 更新要提交的内容）
+     … +9 lines (ctrl+o to expand)
+
+● Bash(git diff)
+  ⎿  warning: in the working copy of '.gitignore', CRLF will be replaced by
+      LF the next time Git touches it
+     diff --git a/.gitignore b/.gitignore
+     … +27 lines (ctrl+o to expand)
+
+● Bash(git log --oneline -15)
+  ⎿  b5b8ef6 docs: add an issue[200~OneClick_TwoCards_Cause_Analysis] in TO
+     DO.md
+     1d91390 docs: add HOW-TO-RUN guide for running the old Android project
+     … +13 lines (ctrl+o to expand)
+
+● 本次改动汇总
+
+  M  .gitignore                       — 排除 keystore.properties / *.jks /
+  *.keystore
+  M  app/build.gradle                 — 加 signingConfigs.release，Release
+  启用签名
+  A  docs/project-analysis/How-to-build.md  — 生产构建指南
+
+  项目 commit 风格观察
+
+  从 git log 看出本仓库习惯用 conventional commits 前缀（feat / fix / docs / 
+  chore / build），中文标题，单行为主。
+
+  推荐 commit 信息
+
+  主标题（最贴合项目风格，单行）：
+
+  build: 为 Release 构建添加签名配置
+
+  如果想带上正文（推荐，因为本次跨了构建脚本、gitignore、文档三类改动）：
+
+  build: 为 Release 构建添加签名配置
+
+  - app/build.gradle 通过 keystore.properties 注入签名凭据，
+    keystore.properties 缺失时自动跳过，不影响 Debug 构建
+  - .gitignore 排除 keystore.properties / *.jks / *.keystore
+  - 新增 docs/project-analysis/How-to-build.md 生产构建指南
+
+  备选方案
+
+  如果不想引入 build: 这个新前缀（项目历史里没出现过），可以改为 chore:：
+
+  chore: 配置 Release 构建签名并补充构建文档
+
+  建议的提交命令
+
+  git add .gitignore app/build.gradle docs/project-analysis/How-to-build.md
+  git commit
+
+  ⚠️ 不要用 git add -A 或 git add .：虽然 keystore 文件已被 .gitignore
+  排除，但显式列出文件更安全（万无一失）。
+
+  ⚠️ 额外提醒：git diff 显示了 .gitignore 有 CRLF 警告（CRLF will be replaced by
+   LF），这不影响提交，但提交后该文件的行尾符会变为 LF。可忽略。
+
+✻ Crunched for 1m 4s
