@@ -1,3 +1,7 @@
+## 已完成
+- [x] 卡片模板添加夜间模式支持（2026-06-15）
+
+## 待办
 - [ ] ISSUE-[2026-0613-1134-OneClick_TwoCards_Cause_Analysis](./docs/bug-analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis.md)
     - [ ] 分析其实现
     - [ ] 学习用到的技术和代码
