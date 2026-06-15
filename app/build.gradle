@@ -1,5 +1,12 @@
 apply plugin: 'com.android.application'
 
+// 从根目录的 keystore.properties 读取签名配置（该文件不应进入版本控制）
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     compileSdkVersion ANDROID_COMPILE_SDK_VERSION
     buildToolsVersion '29.0.2'
@@ -13,8 +20,22 @@ android {
         multiDexEnabled true
         setProperty("archivesBaseName", "Anki 划词助手" + " " + versionName)
     }
+    // Release 签名配置：仅当 keystore.properties 存在时才注入凭据，
+    // 这样未配置签名的开发者仍能正常构建 Debug 版本
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

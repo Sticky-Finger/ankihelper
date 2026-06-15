@@ -62,3 +62,7 @@ chat-logs/
 # 但不忽略 .gitkeep 文件（取反规则）
 !chat-logs/.gitkeep
 chat-logs/**/.git
+# 签名相关（不入库）
+keystore.properties
+*.jks
+*.keystore
