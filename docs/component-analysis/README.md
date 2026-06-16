@@ -14,7 +14,8 @@ com.mmjang.ankihelper/                  # app/src/main/java/com/mmjang/ankihelpe
 │
 ├── ui/                                 # 表示层 - 用户界面组件
 │   ├── popup/                          # 悬浮弹窗界面
-│   │   └── PopupActivity.java          # 单词选择和卡片创建主界面              （暂无）
+│   │   └── PopupActivity.java          # 单词选择和卡片创建主界面
+│   │       └── 划词组件（分词 + 词典查询 + 释义渲染） → PopupActivity_Word_Lookup_Analysis.md
 │   ├── LauncherActivity.java           # 主界面（位于 ui/ 根目录）             （暂无）
 │   ├── plan/                           # 方案管理界面
 │   │   ├── PlanEditorActivity.java     # 方案编辑器
@@ -79,6 +80,7 @@ com.mmjang.ankihelper/                  # app/src/main/java/com/mmjang/ankihelpe
 | 1 | [PlanEditor_Deck_Selector_Analysis.md](./PlanEditor_Deck_Selector_Analysis.md) | 方案编辑器「牌组」选择器 | `ui/plan/PlanEditorActivity.java` |
 | 2 | [PlanEditor_Dictionary_Selector_Analysis.md](./PlanEditor_Dictionary_Selector_Analysis.md) | 方案编辑器「词典」选择器 | `ui/plan/PlanEditorActivity.java` |
 | 3 | [CBWatcherService_Clipboard_Notification_Analysis.md](./CBWatcherService_Clipboard_Notification_Analysis.md) | 剪切板查词触发的下拉通知栏常驻消息 | `domain/CBWatcherService.java` |
+| 4 | [PopupActivity_Word_Lookup_Analysis.md](./PopupActivity_Word_Lookup_Analysis.md) | PopupActivity 划词组件（通知点击后的分词/查询/渲染主链路） | `ui/popup/PopupActivity.java` |
 
 ---
 
