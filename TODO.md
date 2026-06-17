@@ -2,6 +2,20 @@
 - [x] 卡片模板添加夜间模式支持（2026-06-15）
 
 ## 待办
+
+### 功能开发
+
+- [ ] [剪贴板锁定 + PopupActivity 状态保留](./docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md)（2026-06-17 计划）
+    - [ ] Settings.java：新增 `clipboard_locked` 布尔字段 + 6 个 Popup 状态持久化字段
+    - [ ] CBWatcherService.java：`performClipboardCheck()` 加锁检查；通知 `addAction()` 锁定按钮；处理锁定/更新 intent
+    - [ ] PopupActivity.java：生命周期状态保存/恢复；底部锁定按钮；`onNewIntent()`；`onWindowFocusChanged()` 加锁检查
+    - [ ] AndroidManifest.xml：移除 PopupActivity 的 `android:noHistory="true"`
+    - [ ] activity_popup.xml：底部 footer 新增锁定按钮
+    - [ ] 新增图标资源（ic_lock_closed.xml / ic_lock_open.xml）和字符串资源
+    - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到端测试）
+
+### 问题分析
+
 - [ ] ISSUE-[2026-0613-1134-OneClick_TwoCards_Cause_Analysis](./docs/bug-analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis.md)
     - [ ] 分析其实现
     - [ ] 学习用到的技术和代码
