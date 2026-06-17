@@ -39,6 +39,17 @@ public class Settings {
     private final static String USER_BAIDUFANYI_APP_ID = "user_baidu_fanyi_app_id";
     private final static String USER_BAIDUFANYI_APP_KEY = "user_baidu_fanyi_app_key";
 
+    /**************/  //剪贴板锁定相关
+    private final static String CLIPBOARD_LOCKED = "clipboard_locked";
+
+    /**************/  //PopupActivity 状态持久化
+    private final static String POPUP_TEXT = "popup_text";                 // mTextToProcess
+    private final static String POPUP_TARGET_WORD = "popup_word";          // mTargetWord
+    private final static String POPUP_NOTE = "popup_note";                 // mNoteEditedByUser
+    private final static String POPUP_TAGS = "popup_tags";                 // mTagEditedByUser (逗号分隔)
+    private final static String POPUP_NOTE_ID = "popup_note_id";           // mUpdateNoteId
+    private final static String POPUP_UPDATE_ACTION = "popup_action";      // mUpdateAction
+
     private SharedPreferences sp;
     private SharedPreferences.Editor editor;
 
@@ -238,6 +249,75 @@ public class Settings {
         editor.putString(USER_BAIDUFANYI_APP_KEY, userBaidufanyiAppKey);
         editor.commit();
     }
+
+    /**************/  // 剪贴板锁定
+
+    public boolean getClipboardLocked() {
+        return sp.getBoolean(CLIPBOARD_LOCKED, false);
+    }
+
+    public void setClipboardLocked(boolean locked) {
+        editor.putBoolean(CLIPBOARD_LOCKED, locked);
+        editor.commit();
+    }
+
+    /**************/  // PopupActivity 状态持久化
+
+    public String getPopupText() {
+        return sp.getString(POPUP_TEXT, "");
+    }
+
+    public void setPopupText(String text) {
+        editor.putString(POPUP_TEXT, text);
+        editor.commit();
+    }
+
+    public String getPopupTargetWord() {
+        return sp.getString(POPUP_TARGET_WORD, "");
+    }
+
+    public void setPopupTargetWord(String word) {
+        editor.putString(POPUP_TARGET_WORD, word);
+        editor.commit();
+    }
+
+    public String getPopupNote() {
+        return sp.getString(POPUP_NOTE, "");
+    }
+
+    public void setPopupNote(String note) {
+        editor.putString(POPUP_NOTE, note);
+        editor.commit();
+    }
+
+    public String getPopupTags() {
+        return sp.getString(POPUP_TAGS, "");
+    }
+
+    public void setPopupTags(String tags) {
+        editor.putString(POPUP_TAGS, tags);
+        editor.commit();
+    }
+
+    public long getPopupNoteId() {
+        return sp.getLong(POPUP_NOTE_ID, 0L);
+    }
+
+    public void setPopupNoteId(long noteId) {
+        editor.putLong(POPUP_NOTE_ID, noteId);
+        editor.commit();
+    }
+
+    public String getPopupUpdateAction() {
+        return sp.getString(POPUP_UPDATE_ACTION, "");
+    }
+
+    public void setPopupUpdateAction(String action) {
+        editor.putString(POPUP_UPDATE_ACTION, action);
+        editor.commit();
+    }
+
+    /**************/
 
     boolean hasKey(String key) {
         return sp.contains(key);

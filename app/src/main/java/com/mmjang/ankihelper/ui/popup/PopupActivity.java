@@ -170,6 +170,7 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
     ImageButton mBtnFooterRotateLeft;
     ImageButton mBtnFooterRotateRight;
     ImageButton mBtnFooterScrollup;
+    ImageButton mBtnLock;
     ProgressBar progressBar;
     ProgressBar mAudioProgress;
 
@@ -261,6 +262,46 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
         asyncInvokeDroid();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateLockButtonUI();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        // 重置内存状态（锁定时 handleIntent 会从持久化恢复）
+        resetPopupState();
+        handleIntent();
+        updateLockButtonUI();
+    }
+
+    private void resetPopupState() {
+        mTextToProcess = "";
+        mTargetWord = null;
+        mNoteEditedByUser = "";
+        mTagEditedByUser = new HashSet<>();
+        mUpdateNoteId = 0L;
+        mUpdateAction = null;
+        mUrl = "";
+        mDefinitionList = null;
+        isFromAndroidQClipboard = false;
+        if (viewDefinitionList != null) {
+            viewDefinitionList.removeAllViews();
+        }
+        if (act != null) {
+            act.setText("");
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        savePopupState();
+    }
+
     private void asyncInvokeDroid() {
         new Thread(
                 new Runnable() {
@@ -325,6 +366,7 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
         mBtnFooterRotateLeft = (ImageButton) findViewById(R.id.footer_rotate_left);
         mBtnFooterRotateRight= (ImageButton) findViewById(R.id.footer_rotate_right);
         mBtnFooterScrollup = (ImageButton) findViewById(R.id.footer_scroll_up);
+        mBtnLock = (ImageButton) findViewById(R.id.footer_lock);
         mAudioProgress = findViewById(R.id.audio_progress);
     }
 
@@ -646,6 +688,25 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
                     }
                 }
         );
+
+        mBtnLock.setOnClickListener(
+                new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        boolean currentLocked = settings.getClipboardLocked();
+                        settings.setClipboardLocked(!currentLocked);
+                        updateLockButtonUI();
+                        // 通知 CBWatcherService 刷新通知栏锁定按钮
+                        Intent updateIntent = new Intent(PopupActivity.this, CBWatcherService.class);
+                        updateIntent.setAction("ACTION_UPDATE_NOTIFICATION");
+                        startService(updateIntent);
+                        String msg = currentLocked ?
+                                getString(R.string.clipboard_unlocked_toast) :
+                                getString(R.string.clipboard_locked_toast);
+                        Toast.makeText(PopupActivity.this, msg, Toast.LENGTH_SHORT).show();
+                    }
+                }
+        );
     }
 
     private IDictionary getDictionaryFromOutputPlan(OutputPlanPOJO outputPlan) {
@@ -690,7 +751,14 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
+        if(hasFocus) {
+            updateLockButtonUI();
+        }
         if(isFromAndroidQClipboard) {
+            if (settings.getClipboardLocked()) {
+                isFromAndroidQClipboard = false;
+                return;
+            }
             if (!Settings.getInstance(MyApplication.getContext()).getMoniteClipboardQ()) {
                 return;
             }
@@ -730,8 +798,23 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
             String base64 = intent.getStringExtra(Constant.INTENT_ANKIHELPER_BASE64);
             mTextToProcess = intent.getStringExtra(Intent.EXTRA_TEXT);
             if(mTextToProcess != null && mTextToProcess.equals(Constant.USE_CLIPBOARD_CONTENT_FLAG)){
-                mTextToProcess = "";
-                isFromAndroidQClipboard = true;
+                if (settings.getClipboardLocked()) {
+                    // 锁定状态下：恢复持久化的划词状态，不从剪贴板读取
+                    String savedText = settings.getPopupText();
+                    if (savedText != null && !savedText.isEmpty()) {
+                        mTextToProcess = savedText;
+                        mTargetWord = settings.getPopupTargetWord();
+                        mNoteEditedByUser = settings.getPopupNote();
+                        mTagEditedByUser = Utils.fromStringToTagSet(settings.getPopupTags());
+                        mUpdateNoteId = settings.getPopupNoteId();
+                        mUpdateAction = settings.getPopupUpdateAction();
+                    }
+                    isFromAndroidQClipboard = false;
+                } else {
+                    mTextToProcess = "";
+                    isFromAndroidQClipboard = true;
+                    clearSavedPopupState();
+                }
             }
             if(base64 != null && !base64.equals("0")){
                 mTextToProcess = new String(Base64.decode(mTextToProcess, Base64.DEFAULT));
@@ -1613,6 +1696,32 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
     private void startCBService() {
         Intent intent = new Intent(this, CBWatcherService.class);
         startService(intent);
+    }
+
+    private void savePopupState() {
+        if (mTextToProcess != null && !mTextToProcess.isEmpty()) {
+            settings.setPopupText(mTextToProcess);
+            settings.setPopupTargetWord(mTargetWord != null ? mTargetWord : "");
+            settings.setPopupNote(mNoteEditedByUser != null ? mNoteEditedByUser : "");
+            settings.setPopupTags(Utils.fromTagSetToString(mTagEditedByUser));
+            settings.setPopupNoteId(mUpdateNoteId != null ? mUpdateNoteId : 0L);
+            settings.setPopupUpdateAction(mUpdateAction != null ? mUpdateAction : "");
+        }
+    }
+
+    private void clearSavedPopupState() {
+        settings.setPopupText("");
+        settings.setPopupTargetWord("");
+        settings.setPopupNote("");
+        settings.setPopupTags("");
+        settings.setPopupNoteId(0L);
+        settings.setPopupUpdateAction("");
+    }
+
+    private void updateLockButtonUI() {
+        boolean locked = settings.getClipboardLocked();
+        mBtnLock.setImageResource(locked ? R.drawable.ic_lock_closed : R.drawable.ic_lock_open);
+        mBtnLock.setAlpha(locked ? 1.0f : 0.6f);
     }
 
     private void showProgressBar() {

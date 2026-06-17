@@ -314,6 +314,17 @@
             android:scaleType="centerInside"
             android:src="?attr/icon_tag"
             android:background="?attr/button_background_selector"            />
+        <ImageButton
+            android:padding="8dp"
+            android:id="@+id/footer_lock"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:adjustViewBounds="true"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_lock_open"
+            android:background="?attr/button_background_selector" />
 
     </LinearLayout>
 

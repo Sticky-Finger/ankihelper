@@ -29,7 +29,6 @@
             android:name=".ui.popup.PopupActivity"
             android:excludeFromRecents="true"
             android:launchMode="singleInstance"
-            android:noHistory="true"
             android:theme="@style/Transparent"
             android:windowSoftInputMode="stateAlwaysHidden">
             <intent-filter>
@@ -69,8 +68,7 @@
         <service
             android:name=".domain.CBWatcherService"
             android:enabled="true"
-            android:exported="true"
-            android:process=":CBService" />
+            android:exported="true" />
 
         <activity
             android:name=".ui.LauncherActivity"

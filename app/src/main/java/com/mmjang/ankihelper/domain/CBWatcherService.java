@@ -50,6 +50,18 @@ public class CBWatcherService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        // 处理 action 意图：锁定切换 / 通知刷新
+        if (intent != null && "ACTION_TOGGLE_LOCK".equals(intent.getAction())) {
+            boolean current = Settings.getInstance(this).getClipboardLocked();
+            Settings.getInstance(this).setClipboardLocked(!current);
+            updateNotification();
+            return START_STICKY;
+        }
+        if (intent != null && "ACTION_UPDATE_NOTIFICATION".equals(intent.getAction())) {
+            updateNotification();
+            return START_STICKY;
+        }
+
         pm.addPrimaryClipChangedListener(listener);
         //notification
         String CHANNEL_ONE_ID = "com.mmjang.ankihelper";
@@ -68,18 +80,28 @@ public class CBWatcherService extends Service {
         }
         long[] vibList = new long[1];
         vibList[0] = 10L;
+
+        startForeground(2333, buildNotification());
+        return START_STICKY;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    private Notification buildNotification() {
+        String CHANNEL_ONE_ID = "com.mmjang.ankihelper";
         Intent intentStart = new Intent(getApplicationContext(), PopupActivity.class);
         intentStart.setAction(Intent.ACTION_SEND);
         intentStart.setType("text/plain");
-        //intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         intentStart.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intentStart.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         intentStart.putExtra(Intent.EXTRA_TEXT, Constant.USE_CLIPBOARD_CONTENT_FLAG);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intentStart, PendingIntent.FLAG_UPDATE_CURRENT);
-        //NotificationManager notiManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
                 .setChannelId(CHANNEL_ONE_ID)
-//                .setContentText(getString(R.string.str_clipboard_service_running))
                 .setSmallIcon(R.drawable.icon_light)
                 .setContentTitle(getResources().getText(R.string.app_name))
                 .setContentIntent(pendingIntent)
@@ -89,20 +111,34 @@ public class CBWatcherService extends Service {
         } else {
             builder = builder.setContentText(getString(R.string.str_clipboard_service_running));
         }
+
+        // 添加剪贴板锁定/解锁按钮
+        boolean locked = Settings.getInstance(this).getClipboardLocked();
+        Intent lockIntent = new Intent(this, CBWatcherService.class);
+        lockIntent.setAction("ACTION_TOGGLE_LOCK");
+        PendingIntent lockPI = PendingIntent.getService(
+                this, 1, lockIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+        int iconRes = locked ? R.drawable.ic_lock_open : R.drawable.ic_lock_closed;
+        String actionText = locked ? getString(R.string.unlock_clipboard) : getString(R.string.lock_clipboard);
+        builder.addAction(iconRes, actionText, lockPI);
+
         Notification noti = builder.build();
         noti.flags |= Notification.FLAG_FOREGROUND_SERVICE;
-        startForeground(2333, noti);
-        return START_STICKY;
+        return noti;
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    private void updateNotification() {
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(2333, buildNotification());
     }
 
     private void performClipboardCheck() {
         Log.d("clip", "clip_changed");
         if (!Settings.getInstance(MyApplication.getContext()).getMoniteClipboardQ()) {
+            return;
+        }
+        // 剪贴板锁定时忽略变化
+        if (Settings.getInstance(MyApplication.getContext()).getClipboardLocked()) {
             return;
         }
         ClipboardManager cb = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);

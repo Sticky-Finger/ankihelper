@@ -5,13 +5,14 @@
 
 ### 功能开发
 
-- [ ] [剪贴板锁定 + PopupActivity 状态保留](./docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md)（2026-06-17 计划）
-    - [ ] Settings.java：新增 `clipboard_locked` 布尔字段 + 6 个 Popup 状态持久化字段
-    - [ ] CBWatcherService.java：`performClipboardCheck()` 加锁检查；通知 `addAction()` 锁定按钮；处理锁定/更新 intent
-    - [ ] PopupActivity.java：生命周期状态保存/恢复；底部锁定按钮；`onNewIntent()`；`onWindowFocusChanged()` 加锁检查
-    - [ ] AndroidManifest.xml：移除 PopupActivity 的 `android:noHistory="true"`
-    - [ ] activity_popup.xml：底部 footer 新增锁定按钮
-    - [ ] 新增图标资源（ic_lock_closed.xml / ic_lock_open.xml）和字符串资源
+- [x] [剪贴板锁定 + PopupActivity 状态保留](./docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md)（2026-06-17 已完成）
+    - [x] 新增图标资源（ic_lock_closed.xml / ic_lock_open.xml）和中英文字符串
+    - [x] Settings.java：新增 clipboard_locked 布尔字段 + 6 个 Popup 状态持久化字段
+    - [x] CBWatcherService.java：performClipboardCheck() 加锁检查；通知 addAction() 锁定按钮；提取 buildNotification() 独立方法；处理 ACTION_TOGGLE_LOCK / ACTION_UPDATE_NOTIFICATION 意图
+    - [x] PopupActivity.java：底部锁定按钮与 updateLockButtonUI()；onPause() 保存状态；onNewIntent() + resetPopupState() 处理 Activity 复用；onWindowFocusChanged() 加锁检查与聚焦时 UI 同步
+    - [x] AndroidManifest.xml：移除 noHistory（Popup 切走后不再立即销毁）
+    - [x] activity_popup.xml：底部 footer 新增锁定 ImageButton
+    - [x] 修复 CBWatcherService 独立进程导致 Settings 跨进程不同步（移除 android:process=":CBService"）
     - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到端测试）
 
 ### 问题分析
