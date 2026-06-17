@@ -1,0 +1,2704 @@
+ ▐▛███▜▌   Claude Code v2.1.148
+▝▜█████▛▘  glm-5.2 · API Usage Billing
+  ▘▘ ▝▝    /media/wpw/D/DOCS/Codes/ankihelper
+
+❯ /model glm-5.2[1m]                                                            
+  ⎿  Set model to glm-5.2[1m] for this session
+
+❯ @PROJECT_ANALYSIS.md 参考这个项目文档，帮我找到下拉菜单里的这个app开启“剪切板 
+  查词”后的通知栏常驻消息item【上面显示“Anki划词助手 复制文本后点此通知划词”】  
+  ⎿  Read PROJECT_ANALYSIS.md (778 lines)
+
+● 我来查找剪贴板监控服务中的通知栏常驻消息实现。
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● 我找到了。这个通知栏常驻消息由 CBWatcherService 前台服务创建。
+
+  通知栏消息位置
+
+  核心代码：
+  app/src/main/java/com/mmjang/ankihelper/domain/CBWatcherService.java:80-94
+
+  NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
+          .setChannelId(CHANNEL_ONE_ID)
+          .setSmallIcon(R.drawable.icon_light)
+          .setContentTitle(getResources().getText(R.string.app_name))      // 
+  标题：Anki划词助手
+          .setContentIntent(pendingIntent)
+          .setWhen(System.currentTimeMillis());
+  if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+      builder = builder.setContentText(getString(R.string.str_clipboard_service_
+  running_version_q));  // 内容（Android 10+）
+  } else {
+      builder =
+  builder.setContentText(getString(R.string.str_clipboard_service_running));
+          // 内容（Android 9-）
+  }
+  Notification noti = builder.build();
+  noti.flags |= Notification.FLAG_FOREGROUND_SERVICE;
+  startForeground(2333, noti);   // 通知 ID = 2333
+
+  文案来源（资源文件）
+
+  ┌───────┬───────────────────────────┬────────────────┬────────────────────┐
+  │ 部分  │        字符串 key         │    中文文案    │      文件位置      │
+  ├───────┼───────────────────────────┼────────────────┼────────────────────┤
+  │ 标题  │ app_name                  │ Anki划词助手   │ AndroidManifest.xm │
+  │       │                           │                │ l / strings.xml    │
+  ├───────┼───────────────────────────┼────────────────┼────────────────────┤
+  │ 内容  │                           │                │                    │
+  │ (Andr │ str_clipboard_service_run │ 复制文本后点此 │ res/values-zh/stri │
+  │ oid   │ ning_version_q            │ 通知划词       │ ngs.xml:69         │
+  │ 10+)  │                           │                │                    │
+  ├───────┼───────────────────────────┼────────────────┼────────────────────┤
+  │ 内容  │                           │                │                    │
+  │ (Andr │ str_clipboard_service_run │ 剪切板服务正在 │ res/values-zh/stri │
+  │ oid   │ ning                      │ 运行           │ ngs.xml:43         │
+  │ 9-)   │                           │                │                    │
+  └───────┴───────────────────────────┴────────────────┴────────────────────┘
+
+  触发链路
+
+  1. 入口：LauncherActivity 中开关「剪切板查词」→ 调用
+  startService(CBWatcherService)
+  2. 服务启动：CBWatcherService.onStartCommand()
+  创建通知通道（ID=com.mmjang.ankihelper，名称=CBService），然后
+  startForeground(2333, noti) 把通知挂到前台
+  3. 点击行为：通知的 PendingIntent 指向 PopupActivity，并带上
+  USE_CLIPBOARD_CONTENT_FLAG，点击后读取剪贴板内容并进入划词界面
+
+  关键常量
+
+  - 通知 ID：2333（CBWatcherService.java:94）
+  - 通知通道 ID：com.mmjang.ankihelper（CBWatcherService.java:55）
+  - 通知通道名：CBService（CBWatcherService.java:56）
+
+✻ Brewed for 25s
+
+❯ 好的，帮我把这个“剪切板查词”激发的下拉通知栏中的组件的分析保存到文档，文件保  
+  存到这个文件夹下 @docs/component-analysis                                     
+  ⎿  Listed directory docs/component-analysis/
+
+● 我先查看现有分析文档的格式风格，再保存新文档。
+
+  Read 1 file (ctrl+o to expand)
+
+● 我了解了文档格式，现在读取 CBWatcherService.java 完整内容并查看相关触发入口。
+
+  Searched for 7 patterns, read 6 files (ctrl+o to expand)
+
+● 信息齐全，现在创建分析文档。
+
+● Write(docs/component-analysis/CBWatcherService_Clipboard_Notification_Analysis
+       .md)
+  ⎿  Wrote 452 lines to docs/component-analysis/CBWatcherService_Clipboard_
+     Notification_Analysis.md
+       2 # 剪切板查词通知栏常驻消息组件分析
+       4 > 组件范围: CBWatcherService 前台服务通知（下拉通知栏中的「Anki
+         划词助手 复制文本后点此通知划词」常驻项）
+       6 ---
+       7 
+       9 ## 组件概述
+         用启动前台服务 `CBWatcherService` 监听系统剪贴板。Android 前台服
+         务必须挂一条常驻通知，本组件就是这条通知：标题为「Anki 划词助手
+         +）或「剪切板服务正在运行」（Android 9 及以下）。点击通知会拉起 
+         `PopupActivity`，读取剪贴板内容进入划词界面。
+     … +522 lines (ctrl+o to expand)
+
+● 文档已保存到
+  docs/component-analysis/CBWatcherService_Clipboard_Notification_Analysis.md。
+
+  文档概要
+
+  文档沿用了同目录下 PlanEditor_*_Selector_Analysis.md 的结构（组件概述 /
+  核心文件 / 通知构建细节 / 实现流程 / 关联组件 / 设计特点 /
+  已知问题），主要内容包括：
+
+  - 核心代码位置：CBWatcherService.java:52-96 的 onStartCommand()，关键常量通知
+  ID=2333、通道 ID=com.mmjang.ankihelper、通道名=CBService
+  - 文案来源：标题 app_name=「Anki 划词助手」；内容按版本分流，Android 10+ 走
+  str_clipboard_service_running_version_q=「复制文本后点此通知划词」
+  - 触发链路：LauncherActivity 开关 → startCBService() → startForeground(2333, 
+  noti)；点击通知经 USE_CLIPBOARD_CONTENT_FLAG 暗号触发 PopupActivity 读取剪贴板
+  - 关联组件：OnlockReceiver（开机恢复）、PopupActivity:1614（场景内保活）、Sett
+  ings.MONITE_CLIPBOARD_Q
+  - 顺带记录的潜在问题：调试 Toast 残留、Android 12+ PendingIntent
+  不可变性、Android 13+ POST_NOTIFICATIONS 权限、Android 14+
+  foregroundServiceType 缺失等
+
+  文档中标注了多个已观察到的真实问题（PendingIntent 不可变性、Toast
+  残留、foregroundServiceType 等），方便后续按优先级修复。
+
+✻ Sautéed for 2m 17s
+
+❯ 这个组建对应 @PROJECT_ANALYSIS.md                                             
+  中目录树的那一部分？或者说是在哪个目录分支下面？我想在                        
+  @docs/component-analysis                                                      
+  下面建一个说明文档README.md或Introduce.md,里面的内容就是以                    
+  @PROJECT_ANALYSIS.md                                                          
+  中目录树为基础，在目录树对应位置标上组件名或组件说明文档名                    
+  ⎿  Read PROJECT_ANALYSIS.md (unchanged)
+  ⎿  Listed directory docs/component-analysis/
+
+● 我来基于 PROJECT_ANALYSIS.md 的目录树创建导航文档，在对应位置标注分析文档。
+
+● Write(docs/component-analysis/README.md)
+  ⎿  Wrote 99 lines to docs/component-analysis/README.md
+       2 # 组件分析文档导航
+       3 > 本目录（`docs/component-analysis/`）存放针对具体组件的深度分析
+         文档。
+         项目目录树为骨架，在每个组件所在位置标注其分析文档。SIS.md) 中的
+       5 >
+       6 > 图例：`→ xxx.md` 表示该位置已有对应的组件分析文档；`（暂无）` 
+       7 表示尚未覆盖。
+       8 ---
+       9 
+      10 ## 目录树与文档对应关系
+     … +141 lines (ctrl+o to expand)
+
+● 已创建 docs/component-analysis/README.md。
+
+  文档说明
+
+  我把 PROJECT_ANALYSIS.md
+  中的目录树扩展到了文件级（原树只到包级别），并在每个组件对应位置标注分析文档：
+
+  - 已收录（3 篇）：用 → xxx.md 标注
+    - ui/plan/PlanEditorActivity.java → 牌组选择器、词典选择器两篇
+    - domain/CBWatcherService.java → 剪贴板通知一篇
+  - 未覆盖：用 （暂无） 占位，方便后续新增时定位
+
+  回答你的问题
+
+  按 PROJECT_ANALYSIS.md 的目录树分支划分：
+
+  ┌─────────────────────────────────────┬───────┬───────────────────────────┐
+  │                文档                 │ 所属  │         具体位置          │
+  │                                     │ 分支  │                           │
+  ├─────────────────────────────────────┼───────┼───────────────────────────┤
+  │ PlanEditor_Deck_Selector_Analysis.m │ ui/ → │ PlanEditorActivity.java   │
+  │ d                                   │       │ 牌组 Spinner              │
+  │                                     │ plan/ │                           │
+  ├─────────────────────────────────────┼───────┼───────────────────────────┤
+  │ PlanEditor_Dictionary_Selector_Anal │ ui/ → │ PlanEditorActivity.java   │
+  │ ysis.md                             │       │ 词典 Spinner              │
+  │                                     │ plan/ │                           │
+  ├─────────────────────────────────────┼───────┼───────────────────────────┤
+  │ CBWatcherService_Clipboard_Notifica │ domai │ CBWatcherService.java（前 │
+  │ tion_Analysis.md                    │ n/    │ 台服务通知）              │
+  └─────────────────────────────────────┴───────┴───────────────────────────┘
+
+  文档末尾还附了「已收录清单」表格和「新增文档时」的操作步骤，便于后续维护。
+
+✻ Cogitated for 42s
+
+❯ 好的我现在要手动提交当前更改，给我个合适的git信息                             
+
+● Bash(git status && echo "---" && git diff --stat)  ⎿  位于分支 250618_selection_filter
+     未跟踪的文件:
+       （使用 "git add <文件>..." 以包含要提交的内容）
+     … +6 lines (ctrl+o to expand)
+
+● Bash(git log --oneline -10)
+  ⎿  1bd8b2a feat: 卡片模板添加夜间模式支持
+     c955b58 chore: ai chat logs for how-to-run and how-to-build
+     1b2bf5d build: 为 Release 构建添加签名配置
+     … +8 lines (ctrl+o to expand)
+
+● 参考最近的 commit 风格（docs: 前缀 + 中文描述），建议如下：
+
+  推荐 commit message
+
+  docs: 添加剪贴板查词通知组件分析文档和组件分析导航
+
+  - 新增 CBWatcherService_Clipboard_Notification_Analysis.md，分析剪切板查词触发
+  的下拉通知栏常驻消息组件
+  - 新增 README.md，以 PROJECT_ANALYSIS.md 目录树为骨架建立组件分析文档导航索引
+
+  单行版本（如果偏好简短）
+
+  docs: 新增剪贴板通知组件分析文档及 component-analysis 目录导航
+
+  按你的 commit 习惯（看 docs: 更新项目分析文档中的已解决问题记录 / docs: 
+  补充词典选择器长名称显示问题的分析文档），单行 + 中文描述是最契合的格式。
+
+✻ Cogitated for 16s
+
+❯ 点击上面提到的CBWatcherService                                                
+  前台服务通知，触发的划词组件，你帮我找下。尽量结合 @PROJECT_ANALYSIS.md 和    
+  @docs/component-analysis/CBWatcherService_Clipboard_Notification_Analysis.md  
+  这个两个文档，尽量少的遍历源代码                                              
+  ⎿  Read PROJECT_ANALYSIS.md (unchanged)
+  ⎿  Read docs/component-analysis/CBWatcherService_Clipboard_Notification_Analysis.md (453 lines)
+
+● 我先查看文档中已点出的关键代码位置（PopupActivity:729-735 和
+  1245），再最小化地补查必要的部分。
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● 通知点击后触发的「划词」组件链就在
+  PopupActivity。结合两份文档和最少源码补查，完整链路如下。
+
+  点击 → 划词的完整调用链
+
+  [通知点击]
+     │
+     ▼ PendingIntent (CBWatcherService.java:78)
+  [PopupActivity 启动，Intent.EXTRA_TEXT = "use_clipboard_content_flag"]
+     │
+     ▼ handleIntent() — PopupActivity.java:718-783
+  [识别 USE_CLIPBOARD_CONTENT_FLAG，置 isFromAndroidQClipboard = true]  ← 文档第
+   117-130 行已点出
+     │
+     ▼ onWindowFocusChanged() — PopupActivity.java:690-716（Android 10+
+  实际读取剪贴板）
+  [读取 ClipboardManager，把剪贴板文本赋给 mTextToProcess]
+     │
+     ▼ populateWordSelectBox() — PopupActivity.java:785-804
+  [TextSplitter.getLocalSegments() 分词 → BigBangLayout.addTextItem()
+  显示可点选词块]
+     │
+     ▼ asyncSearch(word) — PopupActivity.java:807-840
+  [currentDicitonary.wordLookup(word) → List<Definition> → 渲染到
+  viewDefinitionList]
+
+  在 PROJECT_ANALYSIS.md 目录树中的对应位置
+
+  ┌─────────────────┬─────────────────────────┬─────────────────────────────┐
+  │  文档/源码位置  │          组件           │    PROJECT_ANALYSIS.md      │
+  │                 │                         │          中的分支           │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ PopupActivity.j │ 划词主界面（Intent 接收 │ ui/popup/PopupActivity（1,7 │
+  │ ava:718-804     │  + 分词 +               │ 85 行主界面）               │
+  │                 │ 词典查询触发）          │                             │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ PopupActivity.j │ 词条输入框（PROJECT_ANA │                             │
+  │ ava:309 AutoCom │ LYSIS 列出的「AutoCompl │ ui/popup/PopupActivity      │
+  │ pleteTextView   │ eteTextView -           │                             │
+  │ act             │ 自动完成文本输入」）    │                             │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ PopupActivity.j │ 文本选择布局（PROJECT_A │                             │
+  │ ava:319         │ NALYSIS「自定义组件 -   │ ui/widget/BigBangLayout     │
+  │ BigBangLayout   │ BigBangLayout -         │                             │
+  │                 │ 文本选择布局」）        │                             │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ PopupActivity.j │ BigBangLayout           │                             │
+  │ ava:320 BigBang │ 包装器，含              │ ui/widget/                  │
+  │ LayoutWrapper   │ ActionListener 回调     │                             │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ PopupActivity.j │                         │ data/plan/OutputPlan（关联  │
+  │ ava:312         │ 输出方案选择器          │ ）                          │
+  │ planSpinner     │                         │                             │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ PopupActivity.j │ 词典结果列表（PROJECT_A │                             │
+  │ ava:315 viewDef │ NALYSIS「RecyclerView」 │ ui/popup/PopupActivity      │
+  │ initionList     │ 实测为 LinearLayout     │                             │
+  │                 │ 动态填充）              │                             │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ TextSplitter.ge │                         │ util/TextSplitter.java（PRO │
+  │ tLocalSegments( │ 文本分词                │ JECT_ANALYSIS「智能文本分割 │
+  │ )               │                         │ 」）                        │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ currentDicitona │                         │ data/dict/IDictionary.java  │
+  │ ry.wordLookup(w │ 词典查询                │ （PROJECT_ANALYSIS「wordLoo │
+  │ ord)            │                         │ kup(String key)」）         │
+  ├─────────────────┼─────────────────────────┼─────────────────────────────┤
+  │ Definition      │ 查询结果数据结构        │ data/model/Definition       │
+  └─────────────────┴─────────────────────────┴─────────────────────────────┘
+
+  关键分支定位
+
+  按 PROJECT_ANALYSIS.md 的目录树，点击通知后的划词组件位于 ui/popup/ 
+  分支下，核心是 PopupActivity.java，它编排了以下协作组件：
+
+  - ui/widget/BigBangLayout ——
+  文本以可点选「词块」形式呈现（即「BigBang」式分词展示）
+  - util/TextSplitter —— 负责把整段文本切成单词列表
+  - data/dict/IDictionary —— 查询入口（由 DictionaryRegister 提供具体词典实例）
+  - data/plan/OutputPlan —— 决定查到结果后填到哪些 Anki 字段
+
+  与通知文档（CBWatcherService 分析）的衔接点
+
+  通知文档第 113-130 行已经精准指出了「跳转目标」在
+  PopupActivity.java:729-735，那里只是入口识别。真正的「划词」逻辑实际上是：
+
+  1. handleIntent() 调 populateWordSelectBox()（第 770 行），但此时
+  mTextToProcess 在 Android 10+ 上还是空字符串
+  2. 等 Activity 拿到窗口焦点后 onWindowFocusChanged()（第 690 
+  行）才真正读取剪贴板内容，再次调用 populateWordSelectBox() 完成分词和首词查询
+
+  结论：通知点击触发的「划词组件」= ui/popup/PopupActivity + 其内部的
+  BigBangLayout（词块展示）+ TextSplitter（分词）+
+  IDictionary.wordLookup()（查词），全部位于 ui/popup/ 和 ui/widget/
+  分支下，并通过 data/dict/、util/ 完成实际查词。
+
+✻ Sautéed for 55s
+
+❯ 好的，还是按照之前的组建分析文档，把这个Popup组件的分析保存到                 
+  @docs/component-analysis/ 。然后再把它在这个文件夹下的README里标明            
+  ⎿  Listed directory docs/component-analysis/
+
+● 我先快速补查 PopupActivity
+  的初始化、词典选择切换、卡片创建等关键流程，再产出文档。
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● 信息已齐全。现在创建分析文档。
+
+● Write(docs/component-analysis/PopupActivity_Word_Lookup_Analysis.md)
+  ⎿  Wrote 426 lines to
+     docs/component-analysis/PopupActivity_Word_Lookup_Analysis.md
+       2 # PopupActivity 划词组件分析
+       3 > 分析日期: 2026-06-17
+       4 > 组件范围: PopupActivity 划词界面（从通知点击/分享/复制等入口拉
+       5 起后的「文本分词 + 词典查询 + 释义展示」核心交互）
+       6 ---
+       7 
+       9 ## 组件概述
+      10 `PopupActivity` 是 AnkiHelper 应用的「悬浮划词主界面」，是用户从
+         外部入口（剪贴板通知点击、Chrome 上下文菜单、FBReader、系统分享
+         ）进入后的统一工作面板。它负责：
+     … +501 lines (ctrl+o to expand)
+
+● 现在更新 README.md，标注新文档。
+
+● Update(docs/component-analysis/README.md)
+  ⎿  Added 2 lines, removed 1 line
+      14  │
+      15  ├── ui/                                 # 表示层 - 用户界面组件
+      16  │   ├── popup/                          # 悬浮弹窗界面
+      17 -│   │   └── PopupActivity.java          # 单词选择和卡片创建主 
+         -界面              （暂无）                                     
+      17 +│   │   └── PopupActivity.java          # 单词选择和卡片创建主 
+         +界面                                                           
+      18 +│   │       └── 划词组件（分词 + 词典查询 + 释义渲染） → PopupA
+         +ctivity_Word_Lookup_Analysis.md                                
+      19  │   ├── LauncherActivity.java           # 主界面（位于 ui/ 根目
+          录）             （暂无）
+      20  │   ├── plan/                           # 方案管理界面
+      21  │   │   ├── PlanEditorActivity.java     # 方案编辑器
+
+● Update(docs/component-analysis/README.md)
+  ⎿  Added 1 line
+      80  | 1 | [PlanEditor_Deck_Selector_Analysis.md](./PlanEditor_Deck_
+          Selector_Analysis.md) | 方案编辑器「牌组」选择器 | `ui/plan/Pla
+          nEditorActivity.java` |
+      81  | 2 | [PlanEditor_Dictionary_Selector_Analysis.md](./PlanEditor
+          _Dictionary_Selector_Analysis.md) | 方案编辑器「词典」选择器 | 
+          `ui/plan/PlanEditorActivity.java` |
+      82  | 3 | [CBWatcherService_Clipboard_Notification_Analysis.md](./C
+          BWatcherService_Clipboard_Notification_Analysis.md) | 剪切板查
+          词触发的下拉通知栏常驻消息 | `domain/CBWatcherService.java` |
+      83 +| 4 | [PopupActivity_Word_Lookup_Analysis.md](./PopupActivity_W
+         +ord_Lookup_Analysis.md) | PopupActivity 划词组件（通知点击后的 
+         +分词/查询/渲染主链路） | `ui/popup/PopupActivity.java` |       
+      84  
+      85  ---
+      86  
+
+● 完成。新增和更新内容如下：
+
+  新增文档
+
+  docs/component-analysis/PopupActivity_Word_Lookup_Analysis.md
+
+  沿用了 CBWatcherService_* 和 PlanEditor_* 的结构（概述 / 核心文件 / 流程 /
+  关联组件 / 设计特点 / 已知问题），主要覆盖：
+
+  - 核心代码定位：onCreate → handleIntent → onWindowFocusChanged →
+  populateWordSelectBox → asyncSearch → mHandler → processDefinitionList
+  的完整链路，每段标注行号
+  - UI 控件清单：10 个主要控件的 id、类型、用途（基于 assignViews() 第 308-320
+  行）
+  - 协作组件表：10 个外部依赖（TextSplitter / FieldUtil / BigBangLayout /
+  DictionaryRegister / IDictionary / OutputPlan 等）及其在划词链路中的作用
+  - 多入口差异表：通知点击、分享、Chrome 选择、FBReader 四种入口在
+  mTextToProcess 来源和读剪贴板路径上的差异
+  - 已知问题：5 个实测问题（RecyclerView 描述与实现不符、currentDicitonary
+  拼写错误、HandlerLeak、异常堆栈吞掉、cb.getText() 废弃）
+
+  README 更新
+
+  - 目录树中 ui/popup/PopupActivity.java 节点：（暂无） → → 
+  PopupActivity_Word_Lookup_Analysis.md
+  - 已收录清单表格追加第 4 行
+
+  文档间关联
+
+  文档末尾的「与其他组件分析文档的关联」一节把四篇文档串了起来：
+  - CBWatcherService（上游：通知点击拉起 PopupActivity）
+  - PlanEditor_Deck/Dictionary（下游：方案编辑器配置决定 PopupActivity
+  中使用的牌组/词典）
+
+✻ Churned for 1m 50s
+
+❯ 好的我现在要手动提交当前更改，给我个合适的git信息                             
+
+● Bash(git status)
+  ⎿  位于分支 250618_selection_filter
+     尚未暂存以备提交的变更：
+       （使用 "git add <文件>..." 更新要提交的内容）
+     … +8 lines (ctrl+o to expand)
+
+● 参考你最近几次的 commit 风格（docs: 前缀 + 中文描述），建议如下：
+
+  推荐 commit message
+
+  docs: 添加 PopupActivity 划词组件分析文档并更新导航索引
+
+  - 新增 PopupActivity_Word_Lookup_Analysis.md，分析通知点击后的分词/词典查询/释
+  义渲染主链路
+  - README.md 目录树标注 PopupActivity 划词组件位置，已收录清单追加条目
+
+  单行版本
+
+  docs: 新增 PopupActivity 划词组件分析文档并更新 README 导航
+
+  如果想和上次「剪切板通知」那篇保持完全一致的体例，建议用上面的「标题 + 两条
+  bullet」格式，能清楚看出「新增文档 + 更新索引」两件事。
+
+✻ Cooked for 9s
+
+❯ /context   ⎿  Context Usage
+     ⛀ ⛀ ⛀ ⛁ ⛁   glm-5.2[1m]
+     ⛁ ⛶ ⛶ ⛶ ⛶   73.6k/1m tokens (7%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 5.8k tokens (0.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 2.1k tokens (0.2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 1.1k tokens (0.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Messages: 64.7k tokens (6.5%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛶ Free space: 893.4k (89.3%)
+     ⛶ ⛶ ⛶ ⛝ ⛝   ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+     Memory files · /memory
+     └ CLAUDE.md: 2.1k tokens
+
+     Skills · /skills
+
+     Built-in
+     ├ claude-api: ~250 tokens
+     ├ update-config: ~240 tokens
+     ├ run: ~120 tokens
+     ├ loop: ~100 tokens
+     ├ verify: ~90 tokens
+     ├ keybindings-help: ~80 tokens
+     ├ code-review: ~80 tokens
+     ├ fewer-permission-prompts: ~60 tokens
+     ├ security-review: ~30 tokens
+     ├ init: ~20 tokens
+     └ review: < 20 tokens
+
+❯ 我现在有个优化用户体验的功能：我希望给粘帖板的同一个内容划词时，我给它添加‘笔 
+  记’时，可以去复制黏贴上去。这时会遇到一个情况，就是黏贴板内容会变成我复制的笔 
+  记内容，前面想要划词的粘帖板内容变了。因此为了实现该功能，我想给粘帖板监控添  
+  加一个锁定功能。我的设想是，可以在通知栏“CBWatcherService                     
+  前台服务通知”中添加一个锁定开关，并且最好能在Popup里添加一个锁定按钮。        
+
+● 这是一个很实用的体验优化。根据我们已有的组件分析文档，这个功能涉及两个核心组件
+  的交互：
+
+  - CBWatcherService_Clipboard_Notification_Analysis.md（通知栏）
+  - PopupActivity_Word_Lookup_Analysis.md（划词界面）
+
+  实现要点预览
+
+  1. 通知栏添加锁定开关
+
+  难点：Android 通知栏的交互控件有限。
+
+  ┌───────────────────┬───────────────────┬───────────────────────┬────────┐
+  │       方案        │       优点        │         缺点          │ 适配复 │
+  │                   │                   │                       │  杂度  │
+  ├───────────────────┼───────────────────┼───────────────────────┼────────┤
+  │ addAction() 按钮  │ 标准              │ 只能点按，无法直观显  │ 低     │
+  │                   │ API，兼容性好     │ 示「已锁定」状态      │        │
+  ├───────────────────┼───────────────────┼───────────────────────┼────────┤
+  │ RemoteViews       │ 可放 Switch/Toggl │ Android 11+ 起限制自  │        │
+  │ 自定义布局        │ eButton，状态直观 │ 定义通知内容，布局受  │ 中     │
+  │                   │                   │ 限                    │        │
+  ├───────────────────┼───────────────────┼───────────────────────┼────────┤
+  │ NotificationCompa │ 媒体通知风格，支  │ 样式固定，不适合此场  │ 低     │
+  │ t.MediaStyle      │ 持多个按钮        │ 景                    │        │
+  └───────────────────┴───────────────────┴───────────────────────┴────────┘
+
+  推荐：用 addAction() 添加一个 🔒/🔓 切换按钮，点击后通过 PendingIntent
+  发送广播给 CBWatcherService 切换状态。
+
+  2. PopupActivity 添加锁定按钮
+
+  较简单，在布局中加一个 ToggleButton，状态与通知栏同步。
+
+  3. 锁定逻辑
+
+  在 CBWatcherService.performClipboardCheck() 中检查锁定状态：
+  if (!Settings.getInstance(...).getMoniteClipboardQ()) return;
+  if (Settings.getInstance(...).isClipboardLocked()) return;  // 新增
+
+  4. 涉及的文件
+
+  ┌─────────────────────┬───────────────────────────────────────────────────┐
+  │        文件         │                     修改内容                      │
+  ├─────────────────────┼───────────────────────────────────────────────────┤
+  │ Settings.java       │ 新增 isClipboardLocked() / setClipboardLocked()   │
+  ├─────────────────────┼───────────────────────────────────────────────────┤
+  │ CBWatcherService.ja │ performClipboardCheck() 加锁定检查；通知构建加    │
+  │ va                  │ addAction()；处理锁定切换广播                     │
+  ├─────────────────────┼───────────────────────────────────────────────────┤
+  │ PopupActivity.java  │ 布局加锁定按钮；点击同步状态；可选：划词开始时自  │
+  │                     │ 动锁定                                            │
+  ├─────────────────────┼───────────────────────────────────────────────────┤
+  │ strings.xml         │ 添加「锁定剪贴板」等文案                          │
+  ├─────────────────────┼───────────────────────────────────────────────────┤
+  │ AndroidManifest.xml │ 注册锁定切换的 BroadcastReceiver（或用            │
+  │                     │ CBWatcherService 自身处理）                       │
+  └─────────────────────┴───────────────────────────────────────────────────┘
+
+  ---
+  是否需要我进入计划模式，详细设计这个功能的实现方案？我可以：
+  1. 设计通知栏按钮的具体交互（图标切换、PendingIntent 路由）
+  2. 设计 PopupActivity 锁定按钮的位置和样式
+  3. 处理两个入口的状态同步（通知栏 ↔ PopupActivity）
+  4. 考虑边界情况（锁定时用户手动清空剪贴板、重启手机后状态恢复等）
+
+✻ Cogitated for 15s
+
+❯ 我还发现一个问题：我切到其他app去复制内容时，之前的popup会消失【我猜应该是被  
+  系统销毁了】，只能点通知栏“CBWatcherService 前台服务通知”再次进入Popup,但是这 
+  个Popup是一个全新的，之前选中的单词和添加的“笔记”都清空了                     
+
+● 这个补充信息很重要！你遇到的问题是 PopupActivity 
+  状态在切换应用时丢失。这和「剪贴板锁定」是同一个用户体验链条的两环：
+
+  ┌──────────┬─────────────────────────────────┬────────────────┬──────────┐
+  │   问题   │              场景               │      根因      │ 解决方向 │
+  ├──────────┼─────────────────────────────────┼────────────────┼──────────┤
+  │ 剪贴板锁 │ 划词时复制笔记内容覆盖了原剪贴  │ CBWatcherServi │ 加锁定开 │
+  │ 定       │ 板文本                          │ ce 仍监听剪贴  │ 关       │
+  │          │                                 │ 板变化         │          │
+  ├──────────┼─────────────────────────────────┼────────────────┼──────────┤
+  │          │                                 │ 1)             │ 持久化 + │
+  │ 状态丢失 │ 切 app 复制内容后 Popup         │ PopupActivity  │          │
+  │          │ 被系统回收                      │ 非单例2)       │ 单例模式 │
+  │          │                                 │ 状态未持久化   │          │
+  └──────────┴─────────────────────────────────┴────────────────┴──────────┘
+
+  两个问题应该一起解决。让我先探索代码，了解 PopupActivity
+  的当前启动模式、是否有状态保存逻辑、以及如何切换到其他应用时的行为。
+
+● 3 Explore agents finished (ctrl+o to expand)
+   ├ 探索 PopupActivity 启动模式 · 13 tool uses · 0 tokens
+   │ ⎿  Done
+   ├ 探索 Settings 存储能力 · 15 tool uses · 0 tokens
+   │ ⎿  Done
+   └ 探索通知交互模式 · 10 tool uses · 0 tokens
+     ⎿  Done
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ /model glm-5.2 
+  ⎿  Kept model as glm-4.7
+
+❯ /model glm-5.2[1m]                                                            
+  ⎿  Set model to glm-5.2[1m] for this session
+
+❯ 继续                                                                          
+
+● 探索完成，发现关键信息：
+
+  根因诊断：
+  - PopupActivity 配置了 android:noHistory="true" —— 这就是切走即销毁的原因
+  - 同时没有 onSaveInstanceState，状态确实没有任何持久化
+  - 已有 Settings.LAST_SELECTED_PLAN 等持久化模式可复用
+
+  通知栏侧确认：
+  - 用 NotificationCompat.Builder，目前只有 setContentIntent，可加 addAction
+  - CBWatcherService 在 :CBService 独立进程，需要 BroadcastReceiver 接收按钮事件
+
+  在让 Plan agent 设计前，我需要先和你确认几个关键设计决策：
+
+● User declined to answer questions
+  ⎿  · 如何解决 PopupActivity 切走即销毁的问题？ (移除 noHistory + 
+     持久化兜底（推荐） / 仅移除 noHistory / 仅持久化（保留 noHistory）)
+     · 锁定按钮的智能行为？是否进入 Popup 时自动锁定？ (手动锁定（推荐） / 进入 
+     Popup 自动锁定 / 只有通知栏按钮，Popup 内不锁)
+     · 锁定状态下重新进入 Popup（通过通知）时，应该如何处理？ 
+     (恢复上次状态（推荐） / 始终读剪贴板)
+
+❯ /model deepseek-v4-pro[1m]                                                    
+  ⎿  Set model to deepseek-v4-pro[1m] for this session
+
+❯ 继续                                                                          
+
+● 好的，基于之前的探索结果，让我直接进入设计方案阶段。我会基于你最核心的需求（剪
+  贴板锁定 + Popup 状态保留）做出合理的设计决策。
+
+● Plan(设计剪贴板锁定方案)
+  ⎿  Done (27 tool uses · 53.1k tokens · 2m 14s)
+  (ctrl+o to expand)
+
+● Plan agent 给出了详细方案。让我整合优化后写最终计划。
+
+● Updated plan
+  ⎿  /plan to preview
+
+● User approved Claude's plan
+  ⎿  Plan saved to: 
+     ~/.claude/plans/app-popup-cbwatcherservice-popup-popup-purring-ritchie.md ·
+      /plan to edit
+     剪贴板锁定 + PopupActivity 状态保留
+
+     背景
+
+     用户在划词时（PopupActivity
+     打开中）想去别处复制「笔记」内容来粘贴，遇到两个问题：
+
+     1. 剪贴板被覆盖：复制的笔记内容替换了 CBWatcherService
+     正在监听的剪贴板文本，破坏了划词流程
+     2. Popup 被销毁：切到其他 app 后 PopupActivity 被系统销毁（因为 noHistory="
+     true"），之前选的词、写的笔记全丢。只能点通知重新进入，但状态已清空
+
+     本功能一次解决这两个问题：添加剪贴板锁定开关 + 让 PopupActivity 可以保活。
+
+     ---
+     设计方案
+
+     核心思路
+
+     - 三个入口共享一个锁状态（共享 Settings 中的 clipboard_locked 布尔值）：
+       a. 通知栏按钮（下拉通知栏点 🔒/🔓）
+       b. PopupActivity 底部锁定按钮
+       c. 两者同步，任一入口切换，另一个立即感知
+     - 锁定行为：CBWatcherService.performClipboardCheck() 和
+     PopupActivity.onWindowFocusChanged() 中的剪贴板读取都检查锁状态
+     - 状态保留：移除 noHistory（让 Activity 切走时保活）+ SharedPreferences
+     持久化关键字段（兜底）
+
+     交互流程
+
+     用户复制单词 A → 通知 → PopupActivity 展示 A
+         ↓
+     用户在 Popup 里选中词、查释义
+         ↓
+     用户点「🔒 锁定」（通知栏或 Popup 底部按钮均可）
+         ↓
+     用户切到其他 app 复制笔记内容 B
+         ├─ CBWatcherService 检测到剪贴板变化 → 检查锁状态 → 已锁定，忽略
+         ├─ PopupActivity 因移除 noHistory，进入 onStop 但不销毁（短时间）
+         └─ 如果 PopupActivity 被杀（长时间或内存压力）→ onPause 已保存状态
+         ↓
+     用户回到 Popup（或点通知重新进入）
+         ├─ Activity 还活着 → onResume，状态完整保留
+         └─ Activity 已销毁 → 新实例从 SharedPreferences 恢复
+     mTextToProcess/A、笔记等
+         ↓
+     用户粘贴 B 到笔记框
+         ↓
+     用户点「🔓 解锁」→ CBWatcherService 恢复监听
+
+     ---
+     涉及文件
+
+     新建文件
+
+     ┌──────────────────────────────────────────────┬───────────────────────────
+     ┐
+     │                     文件                     │           说明
+     │
+     ├──────────────────────────────────────────────┼───────────────────────────
+     ┤
+     │ app/src/main/res/drawable/ic_lock_closed.xml │ 锁定状态图标 (vector
+     │
+     │                                              │ drawable)
+     │
+     ├──────────────────────────────────────────────┼───────────────────────────
+     ┤
+     │ app/src/main/res/drawable/ic_lock_open.xml   │ 解锁状态图标 (vector
+     │
+     │                                              │ drawable)
+     │
+     └──────────────────────────────────────────────┴───────────────────────────
+     ┘
+
+     修改文件
+
+     文件: app/src/main/java/com/mmjang/ankihelper/data/Settings.java
+     修改内容: 新增 clipboard_locked 布尔字段 + 6 个 Popup 状态字段的
+     getter/setter
+     ────────────────────────────────────────
+     文件: app/src/main/java/com/mmjang/ankihelper/domain/CBWatcherService.java
+     修改内容: performClipboardCheck() 加锁检查；通知构建加 addAction()
+       锁定按钮；处理 ACTION_TOGGLE_LOCK / ACTION_UPDATE_NOTIFICATION
+       意图；重构通知构建为独立方法
+     ────────────────────────────────────────
+     文件: app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java
+     修改内容: 生命周期中保存/恢复状态；底部加锁定按钮；onNewIntent()
+       处理；onWindowFocusChanged() 加锁检查
+     ────────────────────────────────────────
+     文件: app/src/main/AndroidManifest.xml
+     修改内容: 移除 PopupActivity 的 android:noHistory="true"
+     ────────────────────────────────────────
+     文件: app/src/main/res/layout/activity_popup.xml
+     修改内容: 底部 footer 区域新增锁定按钮
+     ────────────────────────────────────────
+     文件: app/src/main/res/values/strings.xml
+     修改内容: 新增锁定相关提示文案（默认英文）
+     ────────────────────────────────────────
+     文件: app/src/main/res/values-zh/strings.xml
+     修改内容: 新增锁定相关提示文案（中文）
+
+     ---
+     各文件改动详情
+
+     1. Settings.java — 状态持久化
+
+     新增锁定状态字段：
+     private final static String CLIPBOARD_LOCKED = "clipboard_locked";
+
+     public boolean getClipboardLocked() {
+         return sp.getBoolean(CLIPBOARD_LOCKED, false);  // 默认未锁定
+     }
+
+     public void setClipboardLocked(boolean locked) {
+         editor.putBoolean(CLIPBOARD_LOCKED, locked);
+         editor.commit();
+     }
+
+     新增 Popup 状态字段（6 个核心字段）：
+     private final static String POPUP_TEXT = "popup_text";           // 
+     mTextToProcess
+     private final static String POPUP_TARGET_WORD = "popup_word";    // 
+     mTargetWord
+     private final static String POPUP_NOTE = "popup_note";           // 
+     mNoteEditedByUser
+     private final static String POPUP_TAGS = "popup_tags";           // 
+     mTagEditedByUser (逗号分隔)
+     private final static String POPUP_NOTE_ID = "popup_note_id";     // 
+     mUpdateNoteId
+     private final static String POPUP_UPDATE_ACTION = "popup_action";// 
+     mUpdateAction
+
+     每个字段提供 getXxx() / setXxx() 方法，遵循现有的 commit()
+     模式。Set<String> 类型的 tags 用逗号拼接/拆分序列化（复用 Utils
+     中已有工具方法或内联处理）。
+
+     2. CBWatcherService.java — 锁定逻辑 + 通知按钮
+
+     重构通知构建： 将现有的通知创建代码提取为 buildNotification()
+     方法，便于锁定状态变化时重建通知。
+
+     performClipboardCheck() 加锁检查（约第 103 行）：
+     private void performClipboardCheck() {
+         if
+     (!Settings.getInstance(MyApplication.getContext()).getMoniteClipboardQ()) {
+             return;
+         }
+         // 新增：锁定状态检查
+         if
+     (Settings.getInstance(MyApplication.getContext()).getClipboardLocked()) {
+             return;
+         }
+         // ... 原有剪贴板读取逻辑 ...
+     }
+
+     onStartCommand() 中处理 action 意图：
+     if (intent != null && "ACTION_TOGGLE_LOCK".equals(intent.getAction())) {
+         boolean current = Settings.getInstance(this).getClipboardLocked();
+         Settings.getInstance(this).setClipboardLocked(!current);
+         updateNotification();  // 刷新通知以显示新锁状态
+         return START_STICKY;
+     }
+     if (intent != null &&
+     "ACTION_UPDATE_NOTIFICATION".equals(intent.getAction())) {
+         updateNotification();
+         return START_STICKY;
+     }
+
+     通知构建中加 addAction()：
+     // 在 buildNotification() 中，builder 构建后
+     Intent lockIntent = new Intent(this, CBWatcherService.class);
+     lockIntent.setAction("ACTION_TOGGLE_LOCK");
+     PendingIntent lockPI = PendingIntent.getService(
+         this, 1, lockIntent, PendingIntent.FLAG_UPDATE_CURRENT |
+     PendingIntent.FLAG_IMMUTABLE);
+
+     boolean locked = Settings.getInstance(this).getClipboardLocked();
+     int iconRes = locked ? R.drawable.ic_lock_open : R.drawable.ic_lock_closed;
+     String actionText = locked ? getString(R.string.unlock_clipboard) :
+     getString(R.string.lock_clipboard);
+
+     builder.addAction(iconRes, actionText, lockPI);
+
+     updateNotification() 方法：
+     private void updateNotification() {
+         NotificationManager nm = (NotificationManager)
+     getSystemService(NOTIFICATION_SERVICE);
+         nm.notify(2333, buildNotification());
+     }
+
+     ▎ 注意：不要递归调用 startService，直接用 NotificationManager.notify() 
+     ▎ 原地更新。
+
+     3. PopupActivity.java — 状态保活 + 锁定按钮
+
+     状态保存（onPause）：
+     @Override
+     protected void onPause() {
+         super.onPause();
+         if (mTextToProcess != null && !mTextToProcess.isEmpty()) {
+             settings.setPopupText(mTextToProcess);
+             settings.setPopupTargetWord(mTargetWord != null ? mTargetWord :
+     "");
+             settings.setPopupNote(mNoteEditedByUser);
+             settings.setPopupTags(joinTags(mTagEditedByUser));
+             settings.setPopupNoteId(mUpdateNoteId);
+             settings.setPopupUpdateAction(mUpdateAction != null ? mUpdateAction
+      : "");
+         }
+     }
+
+     状态恢复（onCreate 中 handleIntent 之前）：
+     // 在 handleIntent() 调用之前，检查是否需要恢复
+     String savedText = settings.getPopupText();
+     if (savedText != null && !savedText.isEmpty() &&
+     !isNewContentIntent(getIntent())) {
+         mTextToProcess = savedText;
+         mTargetWord = settings.getPopupTargetWord();
+         mNoteEditedByUser = settings.getPopupNote();
+         mTagEditedByUser = splitTags(settings.getPopupTags());
+         mUpdateNoteId = settings.getPopupNoteId();
+         mUpdateAction = settings.getPopupUpdateAction();
+         // 继续正常流程（populateWordSelectBox 等）
+     }
+
+     onNewIntent() 处理（singleInstance + REORDER_TO_FRONT 时关键）：
+     @Override
+     protected void onNewIntent(Intent intent) {
+         super.onNewIntent(intent);
+         setIntent(intent);
+         if (isNewContentIntent(intent)) {
+             clearSavedState();
+             handleIntent();  // 处理新划词内容
+         }
+         updateLockButtonUI();
+     }
+
+     锁定按钮（底部 footer 区域）：
+     - assignViews() 中绑定 mBtnLock = findViewById(R.id.footer_lock)
+     - 点击时：切换 settings.setClipboardLocked() → 更新自身图标 →
+     startService(CBWatcherService) 带 ACTION_UPDATE_NOTIFICATION
+     - onResume() 中 updateLockButtonUI() 根据当前锁状态切换图标
+
+     onWindowFocusChanged() 加锁检查（第 693 行附近）：
+     if (isFromAndroidQClipboard) {
+         if (settings.getClipboardLocked()) {   // 新增
+             isFromAndroidQClipboard = false;
+             return;
+         }
+         // ... 原有剪贴板读取逻辑 ...
+     }
+
+     4. AndroidManifest.xml — 移除 noHistory
+
+     <activity
+         android:name=".ui.popup.PopupActivity"
+         android:excludeFromRecents="true"
+         android:launchMode="singleInstance"
+         android:theme="@style/Transparent"
+         android:windowSoftInputMode="stateAlwaysHidden">
+         <!-- 移除 android:noHistory="true" -->
+     </activity>
+
+     5. activity_popup.xml — 底部 footer 加锁按钮
+
+     在现有的 footer_note 和 footer_tag 旁边新增一个 ImageButton：
+
+     <ImageButton
+         android:id="@+id/footer_lock"
+         android:layout_width="0dp"
+         android:layout_height="wrap_content"
+         android:layout_weight="1"
+         android:layout_gravity="center"
+         android:padding="8dp"
+         android:adjustViewBounds="true"
+         android:scaleType="centerInside"
+         android:src="@drawable/ic_lock_open"
+         android:background="?attr/selectableItemBackgroundBorderless" />
+
+     6. 图标资源 — ic_lock_closed.xml / ic_lock_open.xml
+
+     使用 Android Material Design 的锁图标 path data，创建两个 24dp vector
+     drawable：
+     - ic_lock_closed.xml：填充的锁（表示已锁定）
+     - ic_lock_open.xml：打开的锁（表示未锁定）
+
+     ▎ 由于项目使用 Support Library 而非 AndroidX，vector drawable 通过 
+     ▎ app:srcCompat 或直接引用均可。
+
+     7. 字符串资源
+
+     ┌──────────────────────────┬────────────────────────────┬──────────────────
+     ┐
+     │           key            │        默认（英文）        │       中文
+     │
+     ├──────────────────────────┼────────────────────────────┼──────────────────
+     ┤
+     │ lock_clipboard           │ Lock Clipboard             │ 锁定剪贴板
+     │
+     ├──────────────────────────┼────────────────────────────┼──────────────────
+     ┤
+     │ unlock_clipboard         │ Unlock Clipboard           │ 解锁剪贴板
+     │
+     ├──────────────────────────┼────────────────────────────┼──────────────────
+     ┤
+     │ clipboard_locked_toast   │ Clipboard monitoring       │ 剪贴板监听已锁定
+     │
+     │                          │ locked                     │
+     │
+     ├──────────────────────────┼────────────────────────────┼──────────────────
+     ┤
+     │ clipboard_unlocked_toast │ Clipboard monitoring       │ 剪贴板监听已解锁
+     │
+     │                          │ unlocked                   │
+     │
+     └──────────────────────────┴────────────────────────────┴──────────────────
+     ┘
+
+     ---
+     边界情况处理
+
+     ┌──────────────────────────┬───────────────────────────────────────────────
+     ┐
+     │           场景           │                     行为
+     │
+     ├──────────────────────────┼───────────────────────────────────────────────
+     ┤
+     │ 锁定时用户手动清空剪贴板 │ performClipboardCheck() 直接 return，不处理
+     │
+     ├──────────────────────────┼───────────────────────────────────────────────
+     ┤
+     │ 锁定时点通知             │ Popup 打开，onWindowFocusChanged 检查锁状态 →
+     │
+     │                          │  已锁，不读剪贴板；恢复持久化的旧状态
+     │
+     ├──────────────────────────┼───────────────────────────────────────────────
+     ┤
+     │                          │ SharedPreferences
+     │
+     │ 锁定时重启手机           │ 持久化，锁状态保留；CBWatcherService
+     │
+     │                          │ 重启后读锁状态并构建带锁图标的通知
+     │
+     ├──────────────────────────┼───────────────────────────────────────────────
+     ┤
+     │                          │ 用户已解锁表示不再需要保护
+     │
+     │ 解锁后剪贴板是笔记内容 B │ A，CBWatcherService 以 B
+     │
+     │                          │ 为新的监听目标，这是预期行为
+     │
+     ├──────────────────────────┼───────────────────────────────────────────────
+     ┤
+     │ Popup 被系统内存压力杀掉 │ onPause() 已持久化状态，下次进入时恢复
+     │
+     ├──────────────────────────┼───────────────────────────────────────────────
+     ┤
+     │ 快速反复切换锁定         │ commit() 同步写，无竞态问题
+     │
+     └──────────────────────────┴───────────────────────────────────────────────
+     ┘
+
+     ---
+     验证方案
+
+     1. 锁定后切走复制：打开剪贴板查词 → 选一个词 → 点锁定 →
+     切到浏览器复制一段文字 → 切回 AnkiHelper → 确认没有触发新划词，原有 Popup
+     状态保留
+     2. 锁定状态下点通知：锁定后 → 关闭 Popup → 复制新内容 → 点通知 →
+     确认恢复的是上次的词和笔记而非新内容
+     3. 未锁定时点通知：未锁定 → 关闭 Popup → 复制新内容 → 点通知 →
+     确认正常读新内容（现有行为不受影响）
+     4. 通知栏锁定按钮：下拉通知栏 → 看到 🔒/🔓 按钮 → 点击 → 确认锁状态切换 →
+     确认 Popup 中按钮图标同步
+     5. 锁定后手动解锁再复制：解锁 → 复制新文本 → 确认新触发划词（正常恢复监听）
+     6. 重启手机后锁状态：锁定后重启 → 确认通知栏显示锁定状态 → 复制文本 →
+     确认不触发划词
+
+     ---
+     计划生成: Claude Code
+     最后更新: 2026-06-17
+
+● 计划已批准，开始实现。先创建任务列表跟踪进度。  ⎿  Interrupted · What should Claude do instead?
+
+❯ 你先把这个任务记录到 @TODO.md ，然后在 @docs                                  
+  中新建一个合适的文件夹把这个的计划放进去                                      
+  ⎿  Read TODO.md (10 lines)
+  ⎿  Listed directory docs/
+
+● 先读取 TODO.md 确认格式。
+
+  Read 2 files (ctrl+o to expand)
+
+● Update(TODO.md)
+  ⎿  Added 13 lines
+       2  - [x] 卡片模板添加夜间模式支持（2026-06-15）
+       3  
+       4  ## 待办
+       5 +                                                               
+       6 +### 功能开发                                                   
+       7 +                                                               
+       8 +- [ ] [剪贴板锁定 + PopupActivity 状态保留](./docs/feature-plan
+         +/2026-0617-Clipboard_Lock_Plan.md)（2026-06-17 计划）          
+       9 +    - [ ] Settings.java：新增 `clipboard_locked` 布尔字段 + 6  
+         +个 Popup 状态持久化字段                                        
+      10 +    - [ ] CBWatcherService.java：`performClipboardCheck()` 加锁
+         +检查；通知 `addAction()` 锁定按钮；处理锁定/更新 intent        
+      11 +    - [ ] PopupActivity.java：生命周期状态保存/恢复；底部锁定按
+         +钮；`onNewIntent()`；`onWindowFocusChanged()` 加锁检查         
+      12 +    - [ ] AndroidManifest.xml：移除 PopupActivity 的 `android:n
+         +oHistory="true"`                                               
+      13 +    - [ ] activity_popup.xml：底部 footer 新增锁定按钮         
+      14 +    - [ ] 新增图标资源（ic_lock_closed.xml / ic_lock_open.xml）
+         +和字符串资源                                                   
+      15 +                                                               
+      16 +### 问题分析                                                   
+      17 +                                                               
+      18  - [ ] ISSUE-[2026-0613-1134-OneClick_TwoCards_Cause_Analysis](.
+          /docs/bug-analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analy
+          sis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis.md)
+      19      - [ ] 分析其实现
+      20      - [ ] 学习用到的技术和代码
+
+● Bash(mkdir -p /media/wpw/D/DOCS/Codes/ankihelper/docs/feature-plan)
+  ⎿  Done
+
+● Bash(cp /home/wpw/.claude/plans/app-popup-cbwatcherservice-popup-popup-purring
+      -ritchie.md /media/wpw/D/DOCS/Codes/ankihelper/docs/feature-plan/2026-0617
+      -Clipboard_Lo…)
+  ⎿  Done
+
+● 完成。两件事都做好了：
+
+  TODO.md — 在「待办」下新增了「功能开发」分组，记录了剪贴板锁定功能的 6
+  个子任务，每个子任务对应一个待修改文件，并链接到计划文档。
+
+  计划文档 — 存放于 docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md（命名遵循
+  项目英文文件名规范，日期前缀便于排序）。
+
+✻ Brewed for 28s
+
+❯ /model glm-5.2[1m]                                                            
+  ⎿  Set model to glm-5.2[1m] for this session
+
+❯ 我想要在开发这个功能时保证尽可能完备的单元测试的话，是应该先写测试代码再写业  
+  务代码，还是说要怎么做？                                                      
+
+● 这个问题需要分情况看，因为这个功能里代码的性质不统一：
+
+  严格 TDD（先测试）只适合少数部分
+
+  ┌───────────────────────────────────────────────────────────┬─────┬───────┐
+  │                                                           │ 占  │ TDD   │
+  │                         代码性质                          │ 比  │ 适用  │
+  │                                                           │     │  性   │
+  ├───────────────────────────────────────────────────────────┼─────┼───────┤
+  │ 纯逻辑（锁定判断、tags 序列化）                           │ ~10 │ ✅    │
+  │                                                           │ %   │ 适合  │
+  ├───────────────────────────────────────────────────────────┼─────┼───────┤
+  │ Android 集成（生命周期、Notification、SharedPreferences、 │ ~80 │ ⚠️    │
+  │ PendingIntent）                                           │ %   │ 困难  │
+  ├───────────────────────────────────────────────────────────┼─────┼───────┤
+  │ 配置/资源（Manifest、XML、Drawable）                      │ ~10 │ ❌ 不 │
+  │                                                           │ %   │ 适用  │
+  └───────────────────────────────────────────────────────────┴─────┴───────┘
+
+  当前项目的现实约束
+
+  从 CLAUDE.md 看，项目只有 JUnit 4.12（JVM 单测）+ Espresso（设备测试），没有 
+  Robolectric。这意味着：
+
+  - 不引入 Robolectric 的话，Settings、CBWatcherService、PopupActivity
+  的代码几乎没法在 JVM 下测，只能写慢得多的 Espresso 设备测试
+  - 想做"完备单元测试"，第一步应该是引入 
+  Robolectric，否则测试金字塔会塌成只能测纯逻辑或只能跑设备测试
+
+  我的建议（混合策略）
+
+  1. 先引入 Robolectric（build.gradle 加依赖，build.gradle 配置 testOptions { 
+  unitTests.includeAndroidResources = true }）
+  2. 抽离纯逻辑到 helper 类，对它们做严格 TDD：
+    - ClipboardLockPolicy.shouldIgnoreClipboardChange(monitored, locked) ——
+  锁定决策
+    - PopupStateStore —— 把 tags 序列化/反序列化从 Activity 中分离出来
+  3. 集成层用 Robolectric 写"实现后测试"（不强制 TDD，因为 Android 生命周期 mock
+   很痛苦）：
+    - Settings 的 SharedPreferences 读写
+    - CBWatcherService 的 intent action 分发
+  4. 关键路径用 Espresso 做端到端验证（锁定 → 切走 → 复制 → 切回 → 状态保留）
+
+  一个反例提醒
+
+  不要 TDD Settings 的 getter/setter。它们是 SharedPreferences
+  的薄包装，测它就是测 Android 框架，是低价值测试。
+
+  ---
+  是否要我按这个策略开始？如果决定做，我建议第一步先把 Robolectric
+  引入跑通一个最小测试，确认基础设施正常，再按计划开发。
+
+✻ Worked for 49s
+
+❯ 我想加速开发，还是先实现功能，再后面补充单元测试吧。按照我现在的意思，给      
+  @TODO.md 里添加这个模块的单元测试代码任务，记得把这个任务放到合适的位置       
+  ⎿  Read TODO.md (23 lines)
+
+● Update(TODO.md)
+  ⎿  Added 1 line
+      12      - [ ] AndroidManifest.xml：移除 PopupActivity 的 `android:n
+          oHistory="true"`
+      13      - [ ] activity_popup.xml：底部 footer 新增锁定按钮
+      14      - [ ] 新增图标资源（ic_lock_closed.xml / ic_lock_open.xml）
+          和字符串资源
+      15 +    - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁 
+         +定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到 
+         +端测试）                                                       
+      16  
+      17  ### 问题分析
+      18  
+● 已添加。单元测试任务作为剪贴板锁定功能模块的最后一个子任务，明确"功能实现完成
+  后"再做：
+
+  - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁定判断逻辑、tags
+  序列化、状态保存/恢复、关键路径 Espresso 端到端测试）
+
+  这样既保持了任务与所属模块的关联，又表达了"先实现再补测试"的开发顺序。
+
+  现在准备开始实现功能吗？如果可以，我会按现有 TaskList 的顺序推进（先做 Task #1
+   图标和字符串资源，然后 Settings、CBWatcherService、PopupActivity 等）。
+
+✻ Crunched for 42s
+
+❯ 好的我现在要手动提交当前更改，给我个合适的git信息                             
+
+● Bash(git status)
+  ⎿  位于分支 250618_selection_filter
+     要提交的变更：
+       （使用 "git restore --staged <文件>..." 以取消暂存）
+     … +7 lines (ctrl+o to expand)
+
+● 参考最近的 commit 风格（docs: 前缀 + 中文描述），建议：
+
+  推荐 commit message
+
+  docs: 添加剪贴板锁定功能计划文档并登记 TODO 任务
+
+  - 新增 docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md，规划剪贴板锁定 +
+  PopupActivity 状态保留功能
+  - TODO.md 待办下新增功能开发分组，列出 6 个实现子任务 + 1 个后续单元测试任务
+
+  单行版本
+
+  docs: 添加剪贴板锁定功能计划文档并登记 TODO 任务
+
+  按你之前的「标题 + bullet」体例（如 docs: 新增 PopupActivity 
+  划词组件分析文档并更新 README 导航），上面那个标题 + 两条 bullet
+  的格式最契合。
+
+✻ Worked for 28s
+
+❯ /context 
+  ⎿  Context Usage
+     ⛀ ⛀ ⛀ ⛁ ⛁   glm-5.2[1m]
+     ⛁ ⛁ ⛁ ⛶ ⛶   109.4k/1m tokens (11%)
+     ⛶ ⛶ ⛶ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 5.8k tokens (0.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 2.1k tokens (0.2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 1.1k tokens (0.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Messages: 101.2k tokens (10.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛶ Free space: 856.8k (85.7%)
+     ⛶ ⛶ ⛶ ⛝ ⛝   ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+     Memory files · /memory
+     └ CLAUDE.md: 2.1k tokens
+
+     Skills · /skills
+
+     Built-in
+     ├ claude-api: ~250 tokens
+     ├ update-config: ~240 tokens
+     ├ run: ~120 tokens
+     ├ loop: ~100 tokens
+     ├ verify: ~90 tokens
+     ├ keybindings-help: ~80 tokens
+     ├ code-review: ~80 tokens
+     ├ fewer-permission-prompts: ~60 tokens
+     ├ security-review: ~30 tokens
+     ├ init: ~20 tokens
+     └ review: < 20 tokens
+
+❯ /model deepseek-v4-flash[1m]                                                  
+  ⎿  Set model to deepseek-v4-flash[1m] for this session
+
+❯ 开始按照计划 @docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md 实现         
+  @TODO.md里的第8行的任务【这个人物的最后一条line                               
+  15的“补充单单元测试”，你这个次不要去实现】                                    
+  ⎿  Read docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md (298 lines)
+
+● 好，开始按计划实现功能。先更新 TaskList，然后开始读文件。
+
+● 先读取所有需要修改的文件。
+
+  Searched for 1 pattern, read 6 files (ctrl+o to expand)
+
+● Now let me read the remaining parts of PopupActivity.java that I haven't
+  covered yet.
+
+  Read 1 file (ctrl+o to expand)
+
+● 已读完所有文件。我开始按顺序实现，先从图标资源和字符串开始。
+
+● Write(app/src/main/res/drawable/ic_lock_closed.xml)
+  ⎿  Wrote 11 lines to app/src/main/res/drawable/ic_lock_closed.xml
+       2 <vector xmlns:android="http://schemas.android.com/apk/res/androi
+         d"
+       4     android:height="24dp"
+       5     android:viewportWidth="24"
+       7     android:tint="#FFFFFF">"24"
+       8     <path
+      10         android:pathData="M18,8h-1L17,6c0,-2.76 -2.24,-5 -5,-5S7
+         ,3.24 7,6v2L6,8c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2
+         2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2zM15.1,8L8.9,8v-2c0,-1.71 1.3
+         9,-3.1 3.1,-3.1s3.1,1.39 3.1,3.1v2z"/>
+     … +5 lines (ctrl+o to expand)
+● Update(app/src/main/res/drawable/ic_lock_closed.xml)
+  ⎿  Added 2 lines, removed 2 lines
+       4      android:height="24dp"
+       5      android:viewportWidth="24"
+       6      android:viewportHeight="24"
+       7 -    android:tint="#FFFFFF">                                    
+       7 +    >                                                          
+       8      <path
+       9 -        android:fillColor="@android:color/white"               
+       9 +        android:fillColor="#FFFFFF"                            
+      10          android:pathData="M18,8h-1L17,6c0,-2.76 -2.24,-5 -5,-5S
+          7,3.24 7,6v2L6,8c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0
+           2,-0.9 2,-2L20,10c0,-1.1 -0.9,-2 -2,-2zM12,17c-1.1,0 -2,-0.9 -
+          2,-2s0.9,-2 2,-2 2,0.9 2,2 -0.9,2 -2,2zM15.1,8L8.9,8v-2c0,-1.71
+           1.39,-3.1 3.1,-3.1s3.1,1.39 3.1,3.1v2z"/>
+      11  </vector>
+
+● Write(app/src/main/res/drawable/ic_lock_open.xml)
+  ⎿  Wrote 11 lines to app/src/main/res/drawable/ic_lock_open.xml
+       2 <vector xmlns:android="http://schemas.android.com/apk/res/androi
+       3     android:width="24dp"
+       4     android:height="24dp"
+       6     android:viewportHeight="24"
+       7     >
+       9         android:fillColor="#FFFFFF"
+          -2,0.9 -2,2 0.9,2 2,2zM18,8h-1V6c0,-2.76 -2.24,-5 -5,-5 -2.28,0
+          -4.27,1.54 -4.84,3.75 -0.14,0.54 0.18,1.08 0.72,1.22 0.53,0.14 
+         H6c-1.1,0 -2,0.9 -2,2v10c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V10
+         c0,-1.1 -0.9,-2 -2,-2zM18,20H6V10h12v10z"/>
+     … +6 lines (ctrl+o to expand)
+
+● 现在添加字符串资源。
+
+● Update(app/src/main/res/values/strings.xml)
+  ⎿  Added 4 lines
+      157      <string name="set_custom_fanyi_api">Set Custom Baidu Trans
+           lation Api</string>
+      158      <string name="custom_translation_introduction">本应用自带
+           的翻译功能调用的是百度翻译的api，存在每月200万总字符的限额，如
+           果使用翻译功能时出现带 recharge 字样的报错，则需要自行申请一个
+           <a href="https://jingyan.baidu.com/article/219f4bf7bdb028de442
+           d38e1.html">百度翻译API秘钥</a>填入下方，申请后每月的200万字符
+           限额完全能满足个人使用。</string>
+      159      <string name="str_clipboard_service_running_version_q">Cop
+           y text and click this notification</string>
+      160 +    <string name="lock_clipboard">Lock Clipboard</string>     
+      161 +    <string name="unlock_clipboard">Unlock Clipboard</string> 
+      162 +    <string name="clipboard_locked_toast">Clipboard monitoring
+          + locked</string>                                              
+      163 +    <string name="clipboard_unlocked_toast">Clipboard monitori
+          +ng unlocked</string>                                          
+      164  </resources>
+
+● Update(app/src/main/res/values-zh/strings.xml)
+  ⎿  Added 4 lines
+      67      <string name="set_custom_fanyi_api">自定义百度翻译 API</str
+          ing>
+      68      <string name="custom_translation_introduction"><![CDATA[本
+          应用自带的翻译功能调用的是百度翻译的api，存在每月200万总字符的
+          限额，如果使用翻译功能时出现带 recharge 字样的报错，则需要自行
+          申请一个<a href=\'https://jingyan.baidu.com/article/219f4bf7bdb
+          028de442d38e1.html\'>百度翻译API秘钥</a>填入下方，申请后每月的2
+          00万字符限额完全能满足个人使用。]]></string>
+      69      <string name="str_clipboard_service_running_version_q">复制
+          文本后点此通知划词</string>
+      70 +    <string name="lock_clipboard">锁定剪贴板</string>          
+      71 +    <string name="unlock_clipboard">解锁剪贴板</string>        
+      72 +    <string name="clipboard_locked_toast">剪贴板监听已锁定</str
+         +ing>                                                           
+      73 +    <string name="clipboard_unlocked_toast">剪贴板监听已解锁</s
+         +tring>                                                         
+      74  </resources>
+      75   No newline at end of file
+
+● 任务 #1 完成。现在做 Settings.java。
+
+● Update(app/src/main/java/com/mmjang/ankihelper/data/Settings.java)
+  ⎿  Added 11 lines
+      39      private final static String USER_BAIDUFANYI_APP_ID = "user_
+          baidu_fanyi_app_id";
+      40      private final static String USER_BAIDUFANYI_APP_KEY = "user
+          _baidu_fanyi_app_key";
+      41  
+      42 +    /**************/  //剪贴板锁定相关                         
+      43 +    private final static String CLIPBOARD_LOCKED = "clipboard_l
+         +ocked";                                                        
+      44 +                                                               
+      45 +    /**************/  //PopupActivity 状态持久化               
+      46 +    private final static String POPUP_TEXT = "popup_text";     
+         +            // mTextToProcess                                  
+      47 +    private final static String POPUP_TARGET_WORD = "popup_word
+         +";          // mTargetWord                                     
+      48 +    private final static String POPUP_NOTE = "popup_note";     
+         +            // mNoteEditedByUser                               
+      49 +    private final static String POPUP_TAGS = "popup_tags";     
+         +            // mTagEditedByUser (逗号分隔)                     
+      50 +    private final static String POPUP_NOTE_ID = "popup_note_id"
+         +;           // mUpdateNoteId                                   
+      51 +    private final static String POPUP_UPDATE_ACTION = "popup_ac
+         +tion";      // mUpdateAction                                   
+      52 +                                                               
+      53      private SharedPreferences sp;
+      54      private SharedPreferences.Editor editor;
+      55  
+
+● Update(app/src/main/java/com/mmjang/ankihelper/data/Settings.java)
+  ⎿  Added 69 lines
+      250          editor.commit();
+      251      }
+      252  
+      253 +    /**************/  // 剪贴板锁定                           
+      254 +                                                              
+      255 +    public boolean getClipboardLocked() {                     
+      256 +        return sp.getBoolean(CLIPBOARD_LOCKED, false);        
+      257 +    }                                                         
+      258 +                                                              
+      259 +    public void setClipboardLocked(boolean locked) {          
+      260 +        editor.putBoolean(CLIPBOARD_LOCKED, locked);          
+      261 +        editor.commit();                                      
+      262 +    }                                                         
+      263 +                                                              
+      264 +    /**************/  // PopupActivity 状态持久化             
+      265 +                                                              
+      266 +    public String getPopupText() {                            
+      267 +        return sp.getString(POPUP_TEXT, "");                  
+      268 +    }                                                         
+      269 +                                                              
+      270 +    public void setPopupText(String text) {                   
+      271 +        editor.putString(POPUP_TEXT, text);                   
+      272 +        editor.commit();                                      
+      273 +    }                                                         
+      274 +                                                              
+      275 +    public String getPopupTargetWord() {                      
+      276 +        return sp.getString(POPUP_TARGET_WORD, "");           
+      277 +    }                                                         
+      278 +                                                              
+      279 +    public void setPopupTargetWord(String word) {             
+      280 +        editor.putString(POPUP_TARGET_WORD, word);            
+      281 +        editor.commit();                                      
+      282 +    }                                                         
+      283 +                                                              
+      284 +    public String getPopupNote() {                            
+      285 +        return sp.getString(POPUP_NOTE, "");                  
+      286 +    }                                                         
+      287 +                                                              
+      288 +    public void setPopupNote(String note) {                   
+      289 +        editor.putString(POPUP_NOTE, note);                   
+      290 +        editor.commit();                                      
+      291 +    }                                                         
+      292 +                                                              
+      293 +    public String getPopupTags() {                            
+      294 +        return sp.getString(POPUP_TAGS, "");                  
+      295 +    }                                                         
+      296 +                                                              
+      297 +    public void setPopupTags(String tags) {                   
+      298 +        editor.putString(POPUP_TAGS, tags);                   
+      299 +        editor.commit();                                      
+      300 +    }                                                         
+      301 +                                                              
+      302 +    public long getPopupNoteId() {                            
+      303 +        return sp.getLong(POPUP_NOTE_ID, 0L);                 
+      304 +    }                                                         
+      305 +                                                              
+      306 +    public void setPopupNoteId(long noteId) {                 
+      307 +        editor.putLong(POPUP_NOTE_ID, noteId);                
+      308 +        editor.commit();                                      
+      309 +    }                                                         
+      310 +                                                              
+      311 +    public String getPopupUpdateAction() {                    
+      312 +        return sp.getString(POPUP_UPDATE_ACTION, "");         
+      313 +    }                                                         
+      314 +                                                              
+      315 +    public void setPopupUpdateAction(String action) {         
+      316 +        editor.putString(POPUP_UPDATE_ACTION, action);        
+      317 +        editor.commit();                                      
+      318 +    }                                                         
+      319 +                                                              
+      320 +    /**************/                                          
+      321 +                                                              
+      322      boolean hasKey(String key) {
+      323          return sp.contains(key);
+      324      }
+
+● 任务 #2 完成。现在实现 CBWatcherService.java。
+
+● Update(app/src/main/java/com/mmjang/ankihelper/domain/CBWatcherService.java)
+  ⎿  Added 14 lines, removed 24 lines
+      50  
+      51      @Override
+      52      public int onStartCommand(Intent intent, int flags, int sta
+          rtId) {
+      53 +        // 处理 action 意图：锁定切换 / 通知刷新               
+      54 +        if (intent != null && "ACTION_TOGGLE_LOCK".equals(inten
+         +t.getAction())) {                                              
+      55 +            boolean current = Settings.getInstance(this).getCli
+         +pboardLocked();                                                
+      56 +            Settings.getInstance(this).setClipboardLocked(!curr
+         +ent);                                                          
+      57 +            updateNotification();                              
+      58 +            return START_STICKY;                               
+      59 +        }                                                      
+      60 +        if (intent != null && "ACTION_UPDATE_NOTIFICATION".equa
+         +ls(intent.getAction())) {                                      
+      61 +            updateNotification();                              
+      62 +            return START_STICKY;                               
+      63 +        }                                                      
+      64 +                                                               
+      65          pm.addPrimaryClipChangedListener(listener);
+      66          //notification
+      67          String CHANNEL_ONE_ID = "com.mmjang.ankihelper";
+     ...
+      80          }
+      81          long[] vibList = new long[1];
+      82          vibList[0] = 10L;
+      71 -        Intent intentStart = new Intent(getApplicationContext()
+         -, PopupActivity.class);                                        
+      72 -        intentStart.setAction(Intent.ACTION_SEND);             
+      73 -        intentStart.setType("text/plain");                     
+      74 -        //intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);    
+      75 -        intentStart.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);   
+      76 -        intentStart.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FR
+         -ONT);                                                          
+      77 -        intentStart.putExtra(Intent.EXTRA_TEXT, Constant.USE_CL
+         -IPBOARD_CONTENT_FLAG);                                         
+      78 -        PendingIntent pendingIntent = PendingIntent.getActivity
+         -(this, 0, intentStart, PendingIntent.FLAG_UPDATE_CURRENT);     
+      79 -        //NotificationManager notiManager = (NotificationManage
+         -r) getSystemService(NOTIFICATION_SERVICE);                     
+      80 -        NotificationCompat.Builder builder = new NotificationCo
+         -mpat.Builder(this)                                             
+      81 -                .setChannelId(CHANNEL_ONE_ID)                  
+      82 -//                .setContentText(getString(R.string.str_clipbo
+         -ard_service_running))                                          
+      83 -                .setSmallIcon(R.drawable.icon_light)           
+      84 -                .setContentTitle(getResources().getText(R.strin
+         -g.app_name))                                                   
+      85 -                .setContentIntent(pendingIntent)               
+      86 -                .setWhen(System.currentTimeMillis());          
+      87 -        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {   
+      88 -            builder = builder.setContentText(getString(R.string
+         -.str_clipboard_service_running_version_q));                    
+      89 -        } else {                                               
+      90 -            builder = builder.setContentText(getString(R.string
+         -.str_clipboard_service_running));                              
+      91 -        }                                                      
+      92 -        Notification noti = builder.build();                   
+      93 -        noti.flags |= Notification.FLAG_FOREGROUND_SERVICE;    
+      94 -        startForeground(2333, noti);                           
+      83 +                                                               
+      84 +        startForeground(2333, buildNotification());            
+      85          return START_STICKY;
+      86      }
+      87  
+
+● Update(app/src/main/java/com/mmjang/ankihelper/domain/CBWatcherService.java)
+  ⎿  Added 42 lines
+       90          return null;
+       91      }
+       92  
+       93 +    private Notification buildNotification() {                
+       94 +        String CHANNEL_ONE_ID = "com.mmjang.ankihelper";      
+       95 +        Intent intentStart = new Intent(getApplicationContext(
+          +), PopupActivity.class);                                      
+       96 +        intentStart.setAction(Intent.ACTION_SEND);            
+       97 +        intentStart.setType("text/plain");                    
+       98 +        intentStart.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);  
+       99 +        intentStart.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_F
+          +RONT);                                                        
+      100 +        intentStart.putExtra(Intent.EXTRA_TEXT, Constant.USE_C
+          +LIPBOARD_CONTENT_FLAG);                                       
+      101 +        PendingIntent pendingIntent = PendingIntent.getActivit
+          +y(this, 0, intentStart, PendingIntent.FLAG_UPDATE_CURRENT);   
+      102 +                                                              
+      103 +        NotificationCompat.Builder builder = new NotificationC
+          +ompat.Builder(this)                                           
+      104 +                .setChannelId(CHANNEL_ONE_ID)                 
+      105 +                .setSmallIcon(R.drawable.icon_light)          
+      106 +                .setContentTitle(getResources().getText(R.stri
+          +ng.app_name))                                                 
+      107 +                .setContentIntent(pendingIntent)              
+      108 +                .setWhen(System.currentTimeMillis());         
+      109 +        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {  
+      110 +            builder = builder.setContentText(getString(R.strin
+          +g.str_clipboard_service_running_version_q));                  
+      111 +        } else {                                              
+      112 +            builder = builder.setContentText(getString(R.strin
+          +g.str_clipboard_service_running));                            
+      113 +        }                                                     
+      114 +                                                              
+      115 +        // 添加剪贴板锁定/解锁按钮                            
+      116 +        boolean locked = Settings.getInstance(this).getClipboa
+          +rdLocked();                                                   
+      117 +        Intent lockIntent = new Intent(this, CBWatcherService.
+          +class);                                                       
+      118 +        lockIntent.setAction("ACTION_TOGGLE_LOCK");           
+      119 +        PendingIntent lockPI = PendingIntent.getService(      
+      120 +                this, 1, lockIntent, PendingIntent.FLAG_UPDATE
+          +_CURRENT);                                                    
+      121 +        int iconRes = locked ? R.drawable.ic_lock_open : R.dra
+          +wable.ic_lock_closed;                                         
+      122 +        String actionText = locked ? getString(R.string.unlock
+          +_clipboard) : getString(R.string.lock_clipboard);             
+      123 +        builder.addAction(iconRes, actionText, lockPI);       
+      124 +                                                              
+      125 +        Notification noti = builder.build();                  
+      126 +        noti.flags |= Notification.FLAG_FOREGROUND_SERVICE;   
+      127 +        return noti;                                          
+      128 +    }                                                         
+      129 +                                                              
+      130 +    private void updateNotification() {                       
+      131 +        NotificationManager nm = (NotificationManager) getSyst
+          +emService(NOTIFICATION_SERVICE);                              
+      132 +        nm.notify(2333, buildNotification());                 
+      133 +    }                                                         
+      134 +                                                              
+      135      private void performClipboardCheck() {
+      136          Log.d("clip", "clip_changed");
+      137          if (!Settings.getInstance(MyApplication.getContext()).
+           getMoniteClipboardQ()) {
+
+● Update(app/src/main/java/com/mmjang/ankihelper/domain/CBWatcherService.java)  ⎿  Added 4 lines
+      137          if (!Settings.getInstance(MyApplication.getContext()).
+           getMoniteClipboardQ()) {
+      138              return;
+      139          }
+      140 +        // 剪贴板锁定时忽略变化                               
+      141 +        if (Settings.getInstance(MyApplication.getContext()).g
+          +etClipboardLocked()) {                                        
+      142 +            return;                                           
+      143 +        }                                                     
+      144          ClipboardManager cb = (ClipboardManager) getSystemServ
+           ice(CLIPBOARD_SERVICE);
+      145          if (cb.hasPrimaryClip()) {
+      146              if (cb.hasText()) {
+
+● Now let me modify PopupActivity.java. I'll make changes in sequence:
+
+  1. Add mBtnLock field after mBtnFooterScrollup:
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 1 line
+      170      ImageButton mBtnFooterRotateLeft;
+      171      ImageButton mBtnFooterRotateRight;
+      172      ImageButton mBtnFooterScrollup;
+      173 +    ImageButton mBtnLock;                                     
+      174      ProgressBar progressBar;
+      175      ProgressBar mAudioProgress;
+      176  
+
+● 2. assignViews() — bind lock button:
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 1 line
+      326          mBtnFooterRotateLeft = (ImageButton) findViewById(R.id
+           .footer_rotate_left);
+      327          mBtnFooterRotateRight= (ImageButton) findViewById(R.id
+           .footer_rotate_right);
+      328          mBtnFooterScrollup = (ImageButton) findViewById(R.id.f
+           ooter_scroll_up);
+      329 +        mBtnLock = (ImageButton) findViewById(R.id.footer_lock
+          +);                                                            
+      330          mAudioProgress = findViewById(R.id.audio_progress);
+      331      }
+      332  
+
+● 3. 在 setEventListener() 末尾、} 之前添加锁定按钮点击事件：
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 19 lines
+      648                      }
+      649                  }
+      650          );
+      651 +                                                              
+      652 +        mBtnLock.setOnClickListener(                          
+      653 +                new View.OnClickListener() {                  
+      654 +                    @Override                                 
+      655 +                    public void onClick(View v) {             
+      656 +                        boolean currentLocked = settings.getCl
+          +ipboardLocked();                                              
+      657 +                        settings.setClipboardLocked(!currentLo
+          +cked);                                                        
+      658 +                        updateLockButtonUI();                 
+      659 +                        // 通知 CBWatcherService 刷新通知栏锁 
+          +定按钮                                                        
+      660 +                        Intent updateIntent = new Intent(Popup
+          +Activity.this, CBWatcherService.class);                       
+      661 +                        updateIntent.setAction("ACTION_UPDATE_
+          +NOTIFICATION");                                               
+      662 +                        startService(updateIntent);           
+      663 +                        String msg = currentLocked ?          
+      664 +                                getString(R.string.clipboard_u
+          +nlocked_toast) :                                              
+      665 +                                getString(R.string.clipboard_l
+          +ocked_toast);                                                 
+      666 +                        Toast.makeText(PopupActivity.this, msg
+          +, Toast.LENGTH_SHORT).show();                                 
+      667 +                    }                                         
+      668 +                }                                             
+      669 +        );                                                    
+      670      }
+      671  
+      672      private IDictionary getDictionaryFromOutputPlan(OutputPlan
+           POJO outputPlan) {
+
+● 4. handleIntent() — 锁定状态下的剪贴板读取控制：
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Error editing file
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 17 lines, removed 2 lines
+      751              String base64 = intent.getStringExtra(Constant.INT
+           ENT_ANKIHELPER_BASE64);
+      752              mTextToProcess = intent.getStringExtra(Intent.EXTR
+           A_TEXT);
+      753              if(mTextToProcess != null && mTextToProcess.equals
+           (Constant.USE_CLIPBOARD_CONTENT_FLAG)){
+      754 -                mTextToProcess = "";                          
+      755 -                isFromAndroidQClipboard = true;               
+      754 +                if (settings.getClipboardLocked()) {          
+      755 +                    // 锁定状态下：恢复持久化的划词状态，不从 
+          +剪贴板读取                                                    
+      756 +                    String savedText = settings.getPopupText()
+          +;                                                             
+      757 +                    if (savedText != null && !savedText.isEmpt
+          +y()) {                                                        
+      758 +                        mTextToProcess = savedText;           
+      759 +                        mTargetWord = settings.getPopupTargetW
+          +ord();                                                        
+      760 +                        mNoteEditedByUser = settings.getPopupN
+          +ote();                                                        
+      761 +                        mTagEditedByUser = Utils.fromStringToT
+          +agSet(settings.getPopupTags());                               
+      762 +                        mUpdateNoteId = settings.getPopupNoteI
+          +d();                                                          
+      763 +                        mUpdateAction = settings.getPopupUpdat
+          +eAction();                                                    
+      764 +                    }                                         
+      765 +                    isFromAndroidQClipboard = false;          
+      766 +                } else {                                      
+      767 +                    mTextToProcess = "";                      
+      768 +                    isFromAndroidQClipboard = true;           
+      769 +                    clearSavedPopupState();                   
+      770 +                }                                             
+      771              }
+      772              if(base64 != null && !base64.equals("0")){
+      773                  mTextToProcess = new String(Base64.decode(mTex
+           tToProcess, Base64.DEFAULT));
+
+● 5. onWindowFocusChanged() — 锁定状态下不读剪贴板：
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 4 lines
+      712      public void onWindowFocusChanged(boolean hasFocus) {
+      713          super.onWindowFocusChanged(hasFocus);
+      714          if(isFromAndroidQClipboard) {
+      715 +            if (settings.getClipboardLocked()) {              
+      716 +                isFromAndroidQClipboard = false;              
+      717 +                return;                                       
+      718 +            }                                                 
+      719              if (!Settings.getInstance(MyApplication.getContext
+           ()).getMoniteClipboardQ()) {
+      720                  return;
+      721              }
+
+● 6. onResume() — 更新锁定按钮状态：
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 21 lines
+      262          asyncInvokeDroid();
+      263      }
+      264  
+      265 +    @Override                                                 
+      266 +    protected void onResume() {                               
+      267 +        super.onResume();                                     
+      268 +        updateLockButtonUI();                                 
+      269 +    }                                                         
+      270 +                                                              
+      271 +    @Override                                                 
+      272 +    protected void onNewIntent(Intent intent) {               
+      273 +        super.onNewIntent(intent);                            
+      274 +        setIntent(intent);                                    
+      275 +        // 重新处理 Intent（通知点击时的新内容或恢复）        
+      276 +        handleIntent();                                       
+      277 +        updateLockButtonUI();                                 
+      278 +    }                                                         
+      279 +                                                              
+      280 +    @Override                                                 
+      281 +    protected void onPause() {                                
+      282 +        super.onPause();                                      
+      283 +        savePopupState();                                     
+      284 +    }                                                         
+      285 +                                                              
+      286      private void asyncInvokeDroid() {
+      287          new Thread(
+      288                  new Runnable() {
+● 7. 辅助方法：savePopupState()、clearSavedPopupState()、updateLockButtonUI()：
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 26 lines
+      1676          startService(intent);
+      1677      }
+      1678  
+      1679 +    private void savePopupState() {                          
+      1680 +        if (mTextToProcess != null && !mTextToProcess.isEmpty
+           +()) {                                                        
+      1681 +            settings.setPopupText(mTextToProcess);           
+      1682 +            settings.setPopupTargetWord(mTargetWord != null ?
+           + mTargetWord : "");                                          
+      1683 +            settings.setPopupNote(mNoteEditedByUser != null ?
+           + mNoteEditedByUser : "");                                    
+      1684 +            settings.setPopupTags(Utils.fromTagSetToString(mT
+           +agEditedByUser));                                            
+      1685 +            settings.setPopupNoteId(mUpdateNoteId != null ? m
+           +UpdateNoteId : 0L);                                          
+      1686 +            settings.setPopupUpdateAction(mUpdateAction != nu
+           +ll ? mUpdateAction : "");                                    
+      1687 +        }                                                    
+      1688 +    }                                                        
+      1689 +                                                             
+      1690 +    private void clearSavedPopupState() {                    
+      1691 +        settings.setPopupText("");                           
+      1692 +        settings.setPopupTargetWord("");                     
+      1693 +        settings.setPopupNote("");                           
+      1694 +        settings.setPopupTags("");                           
+      1695 +        settings.setPopupNoteId(0L);                         
+      1696 +        settings.setPopupUpdateAction("");                   
+      1697 +    }                                                        
+      1698 +                                                             
+      1699 +    private void updateLockButtonUI() {                      
+      1700 +        boolean locked = settings.getClipboardLocked();      
+      1701 +        mBtnLock.setImageResource(locked ? R.drawable.ic_lock
+           +_closed : R.drawable.ic_lock_open);                          
+      1702 +        mBtnLock.setAlpha(locked ? 1.0f : 0.6f);             
+      1703 +    }                                                        
+      1704 +                                                             
+      1705      private void showProgressBar() {
+      1706          progressBar.setVisibility(View.VISIBLE);
+      1707          btnSearch.setVisibility(View.GONE);
+
+● 让我检查一下 Utils.fromTagSetToString 是否存在。
+
+  Searched for 3 patterns, read 1 file (ctrl+o to expand)
+
+● 现在修改 activity_popup.xml 添加锁定按钮。
+
+● Update(app/src/main/res/layout/activity_popup.xml)
+  ⎿  Added 11 lines
+      314              android:scaleType="centerInside"
+      315              android:src="?attr/icon_tag"
+      316              android:background="?attr/button_background_select
+           or"            />
+      317 +        <ImageButton                                          
+      318 +            android:padding="8dp"                             
+      319 +            android:id="@+id/footer_lock"                     
+      320 +            android:layout_width="0dp"                        
+      321 +            android:layout_height="wrap_content"              
+      322 +            android:layout_weight="1"                         
+      323 +            android:layout_gravity="center"                   
+      324 +            android:adjustViewBounds="true"                   
+      325 +            android:scaleType="centerInside"                  
+      326 +            android:src="@drawable/ic_lock_open"              
+      327 +            android:background="?attr/button_background_select
+          +or" />                                                        
+      328  
+      329      </LinearLayout>
+      330  
+
+● 最后修改 AndroidManifest.xml。
+
+● Update(app/src/main/AndroidManifest.xml)
+  ⎿  Removed 1 line
+      29              android:name=".ui.popup.PopupActivity"
+      30              android:excludeFromRecents="true"
+      31              android:launchMode="singleInstance"
+      32 -            android:noHistory="true"                           
+      32              android:theme="@style/Transparent"
+      33              android:windowSoftInputMode="stateAlwaysHidden">
+      34              <intent-filter>
+
+● 所有代码修改完成。尝试编译验证。
+
+● Bash(./gradlew assembleDebug 2>&1 | tail -30)
+  ⎿  Consider setting the experimental feature flag android.enableSeparateA
+     nnotationProcessing=true in the gradle.properties file to run annotati
+     on processing in a separate task and make compilation incremental.
+     … +19 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● 编译通过，没有错误！让我更新任务状态并检查 TODO.md。
+  ⎿  Invalid tool parameters
+
+● 用编译通过的检查清单做总结。
+
+  Read 1 file (ctrl+o to expand)
+
+● 所有 6 个实现子任务完成，编译通过。以下是验收清单：
+
+  子任务: Settings.java 锁 + 状态字段
+  文件: data/Settings.java
+  状态: 新增 CLIPBOARD_LOCKED + 6 个 Popup 状态字段的 getter/setter
+  ────────────────────────────────────────
+  子任务: CBWatcherService 锁逻辑 + 通知按钮
+  文件: domain/CBWatcherService.java
+  状态: performClipboardCheck() 加锁检查；buildNotification()
+    提取为独立方法；addAction() 锁定按钮；updateNotification()
+    刷新；onStartCommand() 处理 ACTION_TOGGLE_LOCK / ACTION_UPDATE_NOTIFICATION
+  ────────────────────────────────────────
+  子任务: PopupActivity 状态保留 + 锁定按钮
+  文件: ui/popup/PopupActivity.java
+  状态: mBtnLock 字段 + assignViews() 绑定；setEventListener()
+    锁定切换；handleIntent() 锁定判读恢复状态；onWindowFocusChanged()
+    锁检；onNewIntent() 处理；onPause() 保存状态；onResume()
+    更新按钮样式；savePopupState() / clearSavedPopupState() /
+    updateLockButtonUI()
+  ────────────────────────────────────────
+  子任务: AndroidManifest
+  文件: 移除 noHistory="true"
+  状态: PopupActivity 切走后不再立即销毁
+  ────────────────────────────────────────
+  子任务: activity_popup.xml
+  文件: footer 加锁按钮
+  状态: ImageButton id=footer_lock，src=@drawable/ic_lock_open
+  ────────────────────────────────────────
+  子任务: 图标 + 字符串
+  文件: drawable/ic_lock_* + values*/strings.xml
+  状态: ic_lock_closed（填充锁）/ ic_lock_open（开口锁）；4 条字符串中英文双语
+
+  让我现在手动测试一些东西，但是我们也可以在构建完后再统一验证。
+
+  不过还需要注意你可能需要自己更新 TODO.md 的勾选状态（GitHub 格式的
+  [x]）。总体来说功能实现已经完成，可以在真机或模拟器上按验证方案测试了。
+
+✻ Churned for 5m 51s
+
+※ recap: 剪贴板锁定和Popup状态保留功能的6个实现子任务已完成，编译通过。下次可以开始按验证方案测试，或补充单元测试。 (disable recaps in /config)
+
+❯ 手机上测试了一下,popup上最右侧‘锁’图标点击锁定和解锁后，粘帖板锁定和解锁监听  
+  都是正常的。但是CBWatcherService这个下拉菜单的‘锁定剪贴板’和‘解锁剪贴板’是无  
+  效的，点击后UI上能切换，但是实际无效，且打开的popup上的‘锁’图标不会跟随变化。 
+
+● 找到根因了。CBWatcherService 声明在 :CBService 独立进程中运行（manifest 第 73
+  行），导致两个问题：
+
+  ┌────────────────┬────────────────────────┬───────────────────────────────┐
+  │      进程      │          代码          │         Settings 缓存         │
+  ├────────────────┼────────────────────────┼───────────────────────────────┤
+  │ 主进程         │ PopupActivity          │ clipboard_locked =            │
+  │                │ 的锁定按钮             │ false（缓存）                 │
+  ├────────────────┼────────────────────────┼───────────────────────────────┤
+  │ :CBService     │ 通知栏的锁定按钮       │ clipboard_locked =            │
+  │ 进程           │                        │ true（刚写入）                │
+  └────────────────┴────────────────────────┴───────────────────────────────┘
+
+  两个进程各有一份 Settings 单例和它们各自的 SharedPreferences
+  内存缓存，互不可见。所以通知栏切换了状态 → 写入文件 → PopupActivity
+  读不到（缓存已过期）。
+
+  修复方案： 移除 manifest 中的 android:process=":CBService"，让
+  CBWatcherService
+  在主进程运行。作为前台服务它本身就受系统保护，不需要独立进程。
+● Update(app/src/main/AndroidManifest.xml)
+  ⎿  Added 1 line, removed 2 lines
+      68          <service
+      69              android:name=".domain.CBWatcherService"
+      70              android:enabled="true"
+      71 -            android:exported="true"                            
+      72 -            android:process=":CBService" />                    
+      71 +            android:exported="true" />                         
+      72  
+      73          <activity
+      74              android:name=".ui.LauncherActivity"
+
+● 重新编译以验证修改。
+
+● Bash(./gradlew assembleDebug 2>&1 | tail -10)
+  ⎿  > Task :app:transformResourcesWithMergeJavaResForDebug
+     > Task :app:packageDebug
+     > Task :app:assembleDebug
+     … +9 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● 编译通过。现在再测试下应该就好了。
+
+  修复总结： 移除了 android:process=":CBService"，CBWatcherService 和
+  PopupActivity 现在在同一进程运行，Settings
+  共享同一份内存缓存，锁定状态可以双向同步：
+
+  ┌──────────────────┬────────────────────┬─────────────────────────────────┐
+  │      触发源      │   写入 Settings    │          同一进程看见           │
+  ├──────────────────┼────────────────────┼─────────────────────────────────┤
+  │ 通知栏点「锁定」 │ ✅                 │ ✅ PopupActivity 也可见         │
+  │                  │ CBWatcherService   │                                 │
+  ├──────────────────┼────────────────────┼─────────────────────────────────┤
+  │ Popup 点锁定按钮 │ ✅ PopupActivity   │ ✅ CBWatcherService             │
+  │                  │                    │ 也可见（通知刷新）              │
+  └──────────────────┴────────────────────┴─────────────────────────────────┘
+
+  可以重新安装测试，重点关注两个入口的锁定/解锁状态是否互相同步。
+
+✻ Brewed for 1m 10s
+
+※ recap: 实现完剪贴板锁定功能和 Popup 状态保留，排查并修复了通知栏和 Popup 间锁状态不同步的进程隔离问题。需要你重新安装测试通知栏和 Popup 两个入口的锁定/解锁是否互相同步。 (disable recaps in /config)
+
+❯ 基本同步了。我遇到两个问题，先说最重要的：‘笔记’在填写后，即使解锁了剪贴板，  
+  我复制新内容后剪切板内容改变，点击而进入下拉菜单进入popup,打开里面的‘笔记’，  
+  它的内容还是上一次的。我希望剪切板改动后，在打开‘笔记’，里面应该是空的        
+
+● 我找到了问题根因。当 singleInstance 模式复用已有的 PopupActivity
+  时，onNewIntent() → handleIntent() 虽然清除了 Settings
+  中的持久化状态，但内存中的 mNoteEditedByUser
+  字段没有被重置。所以在复用旧实例时，打开笔记对话框仍然显示之前的内容。
+
+  需要添加一个重置内存状态的方法，在非锁定模式下进入时清空所有字段。
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 20 lines, removed 1 line
+      272      protected void onNewIntent(Intent intent) {
+      273          super.onNewIntent(intent);
+      274          setIntent(intent);
+      275 -        // 重新处理 Intent（通知点击时的新内容或恢复）        
+      275 +        // 重置内存状态（锁定时 handleIntent 会从持久化恢复） 
+      276 +        resetPopupState();                                    
+      277          handleIntent();
+      278          updateLockButtonUI();
+      279      }
+      280  
+      281 +    private void resetPopupState() {                          
+      282 +        mTextToProcess = "";                                  
+      283 +        mTargetWord = null;                                   
+      284 +        mNoteEditedByUser = "";                               
+      285 +        mTagEditedByUser = new HashSet<>();                   
+      286 +        mUpdateNoteId = 0L;                                   
+      287 +        mUpdateAction = null;                                 
+      288 +        mUrl = "";                                            
+      289 +        mDefinitionList = null;                               
+      290 +        isFromAndroidQClipboard = false;                      
+      291 +        if (viewDefinitionList != null) {                     
+      292 +            viewDefinitionList.removeAllViews();              
+      293 +        }                                                     
+      294 +        if (act != null) {                                    
+      295 +            act.setText("");                                  
+      296 +        }                                                     
+      297 +    }                                                         
+      298 +                                                              
+      299      @Override
+      300      protected void onPause() {
+      301          super.onPause();
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Bash(./gradlew assembleDebug 2>&1 | tail -10)
+  ⎿  Run with --stacktrace option to get the stack trace. Run with --info o
+     r --debug option to get more log output. Run with --scan to get full i
+     nsights.
+     … +11 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● Bash(./gradlew assembleDebug 2>&1 | grep -A5 "error:")
+  ⎿  No matches found
+  ⎿  (timeout 5m)
+
+● Bash(./gradlew assembleDebug 2>&1 | tail -40)
+  ⎿  > Task :app:preDebugBuild UP-TO-DATE
+     > Task :app:compileDebugAidl NO-SOURCE
+     > Task :app:compileDebugRenderscript NO-SOURCE
+     … +26 lines (ctrl+o to expand)
+
+● Bash(./gradlew clean assembleDebug 2>&1 | tail -15)
+  ⎿  > Task :app:validateSigningDebug UP-TO-DATE
+     > Task :app:signingConfigWriterDebug
+     > Task :app:mergeDebugJniLibFolders
+     … +14 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● clean build 通过。复现场景和修复说明：
+
+  问题场景： singleInstance 模式下，PopupActivity 实例被 onNewIntent()
+  复用。当用户解锁后复制新内容 B，CBWatcherService 直接
+  startActivity(PopupActivity) 不带 USE_CLIPBOARD_CONTENT_FLAG 暗号，而是带着
+  EXTRA_TEXT = B 走 onNewIntent → handleIntent。旧实例的 mNoteEditedByUser
+  仍保留着上次的笔记内容，没有被重置。
+
+  修复方式： 新增 resetPopupState() 方法，在 onNewIntent() 中优先重置所有内存状
+  态字段（mTextToProcess、mNoteEditedByUser、mTagEditedByUser、mDefinitionList
+  等），然后再由 handleIntent()
+  决定是恢复持久化状态（锁定）还是从头开始（未锁定）。
+
+✻ Worked for 2m 16s
+
+※ recap: 剪贴板锁定功能和Popup状态保留已完成，修复了进程隔离导致的同步问题和笔记残留bug。安装新版后重点测试锁定/解锁双向同步和笔记在切换内容后自动清空。 (disable recaps in /config)
+
+❯ 好的，经测试，问题解决。现在我描述下第二个问题：这个问题是个ui同步问题没那么  
+  要命————通知栏CBWatcherService组建点击‘锁定剪切板’显示变成‘解锁剪切板’后，上  
+  拉通知栏查看之前就打开的popup,发现popup的‘锁’图标没有变化                     
+
+● 这个问题是因为 PopupActivity
+  在可见状态下，用户下拉通知栏点击锁定按钮后，PopupActivity
+  没有收到任何通知来更新锁图标。最简修复：在 onWindowFocusChanged(hasFocus)
+  中拉回焦点时刷新锁定按钮状态。
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 3 lines
+      751      @Override
+      752      public void onWindowFocusChanged(boolean hasFocus) {
+      753          super.onWindowFocusChanged(hasFocus);
+      754 +        if(hasFocus) {                                        
+      755 +            updateLockButtonUI();                             
+      756 +        }                                                     
+      757          if(isFromAndroidQClipboard) {
+      758              if (settings.getClipboardLocked()) {
+      759                  isFromAndroidQClipboard = false;
+
+● Bash(./gradlew assembleDebug 2>&1 | tail -5)
+  ⎿  Use '--warning-mode all' to show the individual deprecation warnings.
+     See https://docs.gradle.org/5.1.1/userguide/command_line_interface.htm
+     l#sec:command_line_warnings
+     … +3 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● 编译通过。修复说明：
+
+  问题： 用户下拉通知栏点「锁定剪贴板」→ 通知按钮文字变了 → 收起通知栏 →
+  PopupActivity 的锁图标仍是旧的。因为 PopupActivity
+  不知道通知栏发生了状态变化。
+
+  修复： 在 onWindowFocusChanged(hasFocus) 中添加 if(hasFocus) 
+  updateLockButtonUI()。用户收起通知栏时，PopupActivity
+  重新获得窗口焦点，此时会读取 Settings 中最新的锁状态并更新图标。
+
+  场景链：
+  用户下拉通知栏 → onWindowFocusChanged(false)
+  点击锁定按钮 → CBWatcherService 切换 Settings
+  收起通知栏 → onWindowFocusChanged(true) → updateLockButtonUI() 同步图标
+
+✻ Sautéed for 48s
+
+❯ git status                                                                    
+  ⎿  Interrupted · What should Claude do instead?
+
+❯ 上面问题解决了。帮我更新下 @TODO.md 的第八行这个需求的进度，记住最后一行的单  
+  元测试没做不要勾选它。还有更新时先调整这个line 8需求的子项为我们实际做的东西  
+  ⎿  Read TODO.md (12 lines)
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(TODO.md)
+  ⎿  Added 8 lines, removed 7 lines
+       5  
+       6  ### 功能开发
+       7  
+       8 -- [ ] [剪贴板锁定 + PopupActivity 状态保留](./docs/feature-plan
+         -/2026-0617-Clipboard_Lock_Plan.md)（2026-06-17 计划）          
+       9 -    - [ ] Settings.java：新增 `clipboard_locked` 布尔字段 + 6  
+         -个 Popup 状态持久化字段                                        
+      10 -    - [ ] CBWatcherService.java：`performClipboardCheck()` 加锁
+         -检查；通知 `addAction()` 锁定按钮；处理锁定/更新 intent        
+      11 -    - [ ] PopupActivity.java：生命周期状态保存/恢复；底部锁定按
+         -钮；`onNewIntent()`；`onWindowFocusChanged()` 加锁检查         
+      12 -    - [ ] AndroidManifest.xml：移除 PopupActivity 的 `android:n
+         -oHistory="true"`                                               
+      13 -    - [ ] activity_popup.xml：底部 footer 新增锁定按钮         
+      14 -    - [ ] 新增图标资源（ic_lock_closed.xml / ic_lock_open.xml）
+         -和字符串资源                                                   
+       8 +- [x] [剪贴板锁定 + PopupActivity 状态保留](./docs/feature-plan
+         +/2026-0617-Clipboard_Lock_Plan.md)（2026-06-17 已完成）        
+       9 +    - [x] 新增图标资源（ic_lock_closed.xml / ic_lock_open.xml）
+         +和中英文字符串                                                 
+      10 +    - [x] Settings.java：新增 clipboard_locked 布尔字段 + 6 个 
+         +Popup 状态持久化字段                                           
+      11 +    - [x] CBWatcherService.java：performClipboardCheck() 加锁检
+         +查；通知 addAction() 锁定按钮；提取 buildNotification() 独立方 
+         +法；处理 ACTION_TOGGLE_LOCK / ACTION_UPDATE_NOTIFICATION 意图  
+      12 +    - [x] PopupActivity.java：底部锁定按钮与 updateLockButtonUI
+         +()；onPause() 保存状态；onNewIntent() + resetPopupState() 处理 
+         +Activity 复用；onWindowFocusChanged() 加锁检查与聚焦时 UI 同步 
+      13 +    - [x] AndroidManifest.xml：移除 noHistory（Popup 切走后不再
+         +立即销毁）                                                     
+      14 +    - [x] activity_popup.xml：底部 footer 新增锁定 ImageButton 
+      15 +    - [x] 修复 CBWatcherService 独立进程导致 Settings 跨进程不 
+         +同步（移除 android:process=":CBService"）                      
+      16      - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁
+          定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到
+          端测试）
+      17  
+      18  ### 问题分析
+
+● 已更新。主要调整：
+
+  1. 主项从 [ ] 改为 [x]，日期从「计划」改为「已完成」
+  2. 子项按实际实现重写，新增了实际实现但计划中遗漏的条目：
+    - buildNotification() 提取独立方法、resetPopupState()
+  处理复用、updateLockButtonUI() 同步等细节补充到对应子项
+    - 新增一条 修复 CBWatcherService 独立进程导致 Settings 
+  跨进程不同步（这是计划中没有但必须做的修复）
+  3. 单元测试条目保持 [ ]，未勾选
+
+✻ Worked for 18s
+
+❯ 好的我现在要手动提交当前更改，给我个合适的git信息                             
+
+● Bash(git status && echo "---" && git diff --stat)
+  ⎿  位于分支 250618_selection_filter
+     要提交的变更：
+       （使用 "git restore --staged <文件>..." 以取消暂存）
+     … +20 lines (ctrl+o to expand)
+
+● 参考近期的 commit 风格（feat: 前缀用于功能实现），建议：
+
+  推荐 commit message
+
+  feat: 实现剪贴板锁定和 PopupActivity 状态保留
+
+  - 新增通知栏锁定/解锁按钮（addAction）和 PopupActivity 底部锁定按钮
+  - Settings 新增 clipboard_locked 布尔字段和 6 个 Popup 状态持久化字段
+  - CBWatcherService 加锁检查，不响应锁定期间的剪贴板变化
+  - PopupActivity 状态保存/恢复（onPause/onNewIntent/resetPopupState）
+  - 移除 noHistory 和 :CBService 独立进程，修复跨进程状态不同步
+  - 新增锁定图标 vector drawable 和中英文字符串
+
+  如果偏好简短的单行：
+
+  feat: 实现剪贴板锁定功能和 PopupActivity 状态保留
+
+  按你之前 feat: 卡片模板添加夜间模式支持 的风格，上面带 bullet
+  格式更合适，因为这次改动涉及多个文件层面。
+
+✻ Cooked for 9s
+
+❯ 我已提交。我刚刚测试时又发现一个不和我意愿的地方：我添加添加单词后，之前写的‘ 
+  笔记’会被清空，我想做成不会被清空。还有为了能故一眼看出是否有‘笔记’，我想给po 
+  pup中编写‘笔记’的✏️图标增加UI效果提示————笔记为空时就按照现在的情况显示，笔记 
+  不为空时则颜色加深或者使用其他合适的方案去表示‘笔记’有内容                    
+
+● 好的，两个需求都涉及相同区域。让我先看看添加卡片后笔记怎么被清空的，以及笔记按
+  钮当前的图标机制。
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● 两个需求都涉及笔记状态管理。让我深入探索相关代码路径。
+
+● Explore(探索笔记清除和添加逻辑)
+  ⎿  Done (28 tool uses · 40.0k tokens · 2m 0s)
+  (ctrl+o to expand)
+  Read 3 files (ctrl+o to expand)
+
+● 信息齐全了。现在写计划。
+
+● Updated plan
+  ⎿  /plan to preview
+  ⎿  User rejected Claude's plan:
+     ╭─────────────────────────────────────────────────────────────────────────╮
+     │ 笔记持久化 + 笔记按钮 UI 状态指示                                       │
+     │                                                                         │
+     │ 上下文                                                                  │
+     │                                                                         │
+     │ 当前问题：                                                              │
+     │                                                                         │
+     │ 1. 笔记被清空：添加卡片到 Anki                                          │
+     │ 后（PopupActivity.java:1370），mNoteEditedByUser = ""                   │
+     │ 被硬编码清空。用户希望添加卡片后笔记保留。                              │
+     │ 2. 无视觉提示：笔记按钮（footer_note，✏️图标）一直保持相同外观，用户无法│
+     │ 一眼看出是否已有笔记内容。                                              │
+     │                                                                         │
+     │ 修改方案                                                                │
+     │                                                                         │
+     │ 文件：ui/popup/PopupActivity.java                                       │
+     │                                                                         │
+     │ 1. 笔记不清空                                                           │
+     │                                                                         │
+     │ 删除第 1370 行 mNoteEditedByUser = "";，添加卡片成功后不再清空笔记。    │
+     │                                                                         │
+     │ 注意：resetPopupState() 中的 mNoteEditedByUser = "" 保留不动（那是新    │
+     │ Intent 进入时重置整次划词会话的状态，与「添加卡片后保持笔记」不冲突——添 │
+     │ 加卡片不触发 onNewIntent）。                                            │
+     │                                                                         │
+     │ 2. 笔记按钮 UI 指示                                                     │
+     │                                                                         │
+     │ 新增 updateNoteButtonUI() 方法：                                        │
+     │ private void updateNoteButtonUI() {                                     │
+     │     boolean hasContent = mNoteEditedByUser != null &&                   │
+     │ !mNoteEditedByUser.isEmpty();                                           │
+     │     mBtnEditNote.setAlpha(hasContent ? 1.0f : 0.6f);                    │
+     │ }                                                                       │
+     │ - 笔记为空 → alpha 0.6f（半透明，当前默认）                             │
+     │ - 笔记有内容 → alpha 1.0f（完全不透明，颜色加深效果）                   │
+     │                                                                         │
+     │ 调用时机（3 处）：                                                      │
+     │                                                                         │
+     │                                                                         │
+     │ ┌─────────────────────────────────┬──────────────────────────────────── │
+     │ ────┐                                                                   │
+     │ │              位置               │                  场景               │
+     │     │                                                                   │
+     │ ├─────────────────────────────────┼──────────────────────────────────── │
+     │ ────┤                                                                   │
+     │ │ setupEditNoteDialog() —         │                                     │
+     │     │                                                                   │
+     │ │ 对话确认回调内                  │ 用户编辑笔记确认后立即刷新图标      │
+     │     │                                                                   │
+     │ │ mNoteEditedByUser =             │                                     │
+     │     │                                                                   │
+     │ │ edt.getText().toString() 之后   │                                     │
+     │     │                                                                   │
+     │ ├─────────────────────────────────┼──────────────────────────────────── │
+     │ ────┤                                                                   │
+     │ │ onResume() — 已有               │ Activity 恢复时刷新                 │
+     │     │                                                                   │
+     │ │ updateLockButtonUI() 旁         │                                     │
+     │     │                                                                   │
+     │ ├─────────────────────────────────┼──────────────────────────────────── │
+     │ ────┤                                                                   │
+     │ │ 添加卡片成功后（第 1370         │                                     │
+     │     │                                                                   │
+     │ │ 行附近）—                       │                                     │
+     │ 如果将来其他地方修改笔记内容，保持同步 │                                │
+     │ │ clearBigbangSelection() 之后    │                                     │
+     │     │                                                                   │
+     │ └─────────────────────────────────┴──────────────────────────────────── │
+     │ ────┘                                                                   │
+     │                                                                         │
+     │ 涉及文件                                                                │
+     │                                                                         │
+     │ ┌─────────────────────────┬──────────────────────────────────────────── │
+     │ ───┐                                                                    │
+     │ │          文件           │                    改什么                   │
+     │    │                                                                    │
+     │ ├─────────────────────────┼──────────────────────────────────────────── │
+     │ ───┤                                                                    │
+     │ │ ui/popup/PopupActivity. │ 删除第 1370 行 mNoteEditedByUser = ""；新增 │
+     │    │                                                                    │
+     │ │ java                    │ updateNoteButtonUI() 方法；在               │
+     │ setupEditNoteDi │                                                       │
+     │ │                         │ alog()、onResume()、添加卡片成功处调用      │
+     │    │                                                                    │
+     │ └─────────────────────────┴──────────────────────────────────────────── │
+     │ ───┘                                                                    │
+     │                                                                         │
+     │ 仅此一个文件，无新增资源。                                              │
+     │                                                                         │
+     │ 验证                                                                    │
+     │                                                                         │
+     │ 1. 添加单词后笔记保留：打开 Popup → 写笔记 → 点 + 添加 →                │
+     │ 确认笔记内容还在                                                        │
+     │ 2. 笔记按钮视觉反馈：无内容时半透明 → 写笔记 → 图标变实 →               │
+     │ 清除（编辑为空）→ 恢复半透明                                            │
+     ╰─────────────────────────────────────────────────────────────────────────╯
+
+❯ 这是一个新的需求，我希望能在 @TODO.md 的line                                  
+  8这个需求下面新建一个同级别的需求。参考line                                   
+  8的需求内容，最后一条也要是补充单元测试，且也是在开发完成功能前暂时不做       
+  ⎿  Read TODO.md (25 lines)
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(TODO.md)
+  ⎿  Added 6 lines
+      15      - [x] 修复 CBWatcherService 独立进程导致 Settings 跨进程不
+          同步（移除 android:process=":CBService"）
+      16      - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁
+          定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到
+          端测试）
+      17  
+      18 +- [ ] 笔记持久化与笔记按钮 UI 状态指示（2026-06-17 待开发）    
+      19 +    - [ ] PopupActivity.java：删除添加卡片成功后清空笔记的代码 
+         +（mNoteEditedByUser = ""）                                     
+      20 +    - [ ] PopupActivity.java：新增 updateNoteButtonUI() 根据笔 
+         +记内容调整按钮透明度（有空内容时 alpha 1.0，空时 0.6）         
+      21 +    - [ ] PopupActivity.java：在 setupEditNoteDialog() 确认回调
+         +和 onResume() 中调用 updateNoteButtonUI()                      
+      22 +    - [ ] 功能实现完成后补充单元测试（覆盖笔记保存/恢复逻辑、按
+         +钮状态同步）                                                   
+      23 +                                                               
+      24  ### 问题分析
+      25  
+      26  - [ ] ISSUE-[2026-0613-1134-OneClick_TwoCards_Cause_Analysis](.
+          /docs/bug-analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analy
+          sis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis.md)
+
+● 已完成。在「功能开发」分组下新增了一个同级别条目：
+
+  - [ ] 笔记持久化与笔记按钮 UI 状态指示（2026-06-17 待开发）
+      - [ ] 删除添加卡片后清空笔记的代码
+      - [ ] 新增 updateNoteButtonUI() 根据笔记内容调透明度
+      - [ ] 在 setupEditNoteDialog() 确认回调和 onResume() 中调用
+      - [ ] 功能实现完成后补充单元测试（未勾选）
+
+  结构和你 line 8 的需求保持一致：3 个实现子项 + 最后一个是单元测试（留空 [ 
+  ]）。
+
+✻ Cogitated for 20s
+
+❯ 同理把上面的计划 保存到 @docs/feature-plan/ 中，同样参考 line                 
+  8中提到的plan文档                                                             
+  ⎿  Listed directory docs/feature-plan/
+
+  Read 1 file (ctrl+o to expand)
+
+● Bash(cp /home/wpw/.claude/plans/app-popup-cbwatcherservice-popup-popup-purring
+      -ritchie.md /media/wpw/D/DOCS/Codes/ankihelper/docs/feature-plan/2026-0617
+      -Note_Persist…)
+  ⎿  Done
+
+● Update(TODO.md)
+  ⎿  Added 1 line, removed 1 line
+      15      - [x] 修复 CBWatcherService 独立进程导致 Settings 跨进程不
+          同步（移除 android:process=":CBService"）
+      16      - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁
+          定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到
+          端测试）
+      17  
+      18 -- [ ] 笔记持久化与笔记按钮 UI 状态指示（2026-06-17 待开发）    
+      18 +- [ ] [笔记持久化与笔记按钮 UI 状态指示](./docs/feature-plan/20
+         +26-0617-Note_Persistence_Plan.md)（2026-06-17 待开发）         
+      19      - [ ] PopupActivity.java：删除添加卡片成功后清空笔记的代码
+          （mNoteEditedByUser = ""）
+      20      - [ ] PopupActivity.java：新增 updateNoteButtonUI() 根据笔
+          记内容调整按钮透明度（有空内容时 alpha 1.0，空时 0.6）
+      21      - [ ] PopupActivity.java：在 setupEditNoteDialog() 确认回调
+          和 onResume() 中调用 updateNoteButtonUI()
+
+● 已保存。现在 docs/feature-plan/ 下有两份计划文档：
+
+  docs/feature-plan/
+  ├── 2026-0617-Clipboard_Lock_Plan.md      # 已实现
+  └── 2026-0617-Note_Persistence_Plan.md    # 待开发
+
+  TODO.md 中的新条目也已加上计划文档链接，格式和你 line 8 的完全一致。
+
+✻ Brewed for 18s
+
+❯ 好的我现在要手动提交当前更改，给我个合适的git信息                             
+
+● Bash(git status && echo "---" && git diff --stat)
+  ⎿  位于分支 250618_selection_filter
+     尚未暂存以备提交的变更：
+       （使用 "git add <文件>..." 更新要提交的内容）
+     … +11 lines (ctrl+o to expand)
+
+● 参考近期的 commit 风格（docs: 前缀），建议：
+
+  推荐 commit message
+
+  docs: 添加笔记持久化功能计划文档并登记 TODO 任务
+
+  - 新增 docs/feature-plan/2026-0617-Note_Persistence_Plan.md，规划添加卡片后笔
+  记保留和笔记按钮视觉提示
+  - TODO.md 新增同级别功能开发条目，链接计划文档
+
+  单行版本
+
+  docs: 添加笔记持久化功能计划文档并登记 TODO 任务
+
+✻ Crunched for 6s
+❯ ok. 按照上面的计划开始实现                                                    
+
+  Read 1 file (ctrl+o to expand)
+
+● 1. 删除第 1370 行 mNoteEditedByUser = "";：
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Removed 1 line
+      1367                                                  PopupActivity
+            .this, Utils.getResIdFromAttribute(PopupActivity.this, R.attr
+            .icon_add_done)));
+      1368                                      }
+      1369                                      clearBigbangSelection();
+      1370 -                                    mNoteEditedByUser = "";  
+      1370                                      //attach the noteid to th
+            e button
+      1371                                      btnAddDefinition.setTag(R
+            .id.TAG_NOTE_ID, result);
+      1372                                      //if there is a note id f
+            ield in the model, update the note
+
+● 2. 新增 updateNoteButtonUI() 方法，放在 updateLockButtonUI() 旁边：
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 5 lines
+      1723          mBtnLock.setAlpha(locked ? 1.0f : 0.6f);
+      1724      }
+      1725  
+      1726 +    private void updateNoteButtonUI() {                      
+      1727 +        boolean hasContent = mNoteEditedByUser != null && !mN
+           +oteEditedByUser.isEmpty();                                   
+      1728 +        mBtnEditNote.setAlpha(hasContent ? 1.0f : 0.6f);     
+      1729 +    }                                                        
+      1730 +                                                             
+      1731      private void showProgressBar() {
+      1732          progressBar.setVisibility(View.VISIBLE);
+      1733          btnSearch.setVisibility(View.GONE);
+
+● 3. 在 setupEditNoteDialog() 确认回调中添加：
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 1 line
+      1471          dialogBuilder.setPositiveButton(R.string.dialog_ok, n
+            ew DialogInterface.OnClickListener() {
+      1472              public void onClick(DialogInterface dialog, int w
+            hichButton) {
+      1473                  mNoteEditedByUser = edt.getText().toString();
+      1474 +                updateNoteButtonUI();                        
+      1475              }
+      1476          });
+      1477  //                        dialogBuilder.setNegativeButton("取
+            消", new DialogInterface.OnClickListener() {
+
+● 4. 在 onResume() 中添加：
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 1 line
+      266      protected void onResume() {
+      267          super.onResume();
+      268          updateLockButtonUI();
+      269 +        updateNoteButtonUI();                                 
+      270      }
+      271  
+      272      @Override
+
+● 5. 添加卡片成功后刷新笔记按钮：
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 1 line
+      1368                                                  PopupActivity
+            .this, Utils.getResIdFromAttribute(PopupActivity.this, R.attr
+            .icon_add_done)));
+      1369                                      }
+      1370                                      clearBigbangSelection();
+      1371 +                                    updateNoteButtonUI();    
+      1372                                      //attach the noteid to th
+            e button
+      1373                                      btnAddDefinition.setTag(R
+            .id.TAG_NOTE_ID, result);
+      1374                                      //if there is a note id f
+            ield in the model, update the note
+
+● 编译验证。
+
+● Bash(./gradlew assembleDebug 2>&1 | tail -5)
+  ⎿  Use '--warning-mode all' to show the individual deprecation warnings.
+     See https://docs.gradle.org/5.1.1/userguide/command_line_interface.htm
+     l#sec:command_line_warnings
+     … +3 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● 编译通过。3 处改动全部完成：
+
+  ┌──────────┬─────────────────────────┬─────────────────────────────────────┐
+  │   改动   │          位置           │                说明                 │
+  ├──────────┼─────────────────────────┼─────────────────────────────────────┤
+  │ 删除清空 │ PopupActivity.java:1370 │ 移除 mNoteEditedByUser =            │
+  │          │                         │ "";，添加卡片后笔记保留             │
+  ├──────────┼─────────────────────────┼─────────────────────────────────────┤
+  │ 新增方法 │ updateNoteButtonUI()    │ 笔记有内容 → alpha 1.0，空 → alpha  │
+  │          │                         │ 0.6                                 │
+  ├──────────┼─────────────────────────┼─────────────────────────────────────┤
+  │ 调用点 1 │ setupEditNoteDialog()   │ 用户确认笔记后立即刷新按钮          │
+  ├──────────┼─────────────────────────┼─────────────────────────────────────┤
+  │ 调用点 2 │ onResume()              │ Activity 恢复时同步                 │
+  ├──────────┼─────────────────────────┼─────────────────────────────────────┤
+  │ 调用点 3 │ 添加卡片成功后          │ clearBigbangSelection() 后刷新      │
+  └──────────┴─────────────────────────┴─────────────────────────────────────┘
+
+  可以安装测试验证：写笔记 → 添加卡片 → 笔记保留 + 图标变实 → 清空笔记 →
+  图标恢复半透明。
+
+✻ Cogitated for 1m 11s
+
+※ recap: We have two features live: clipboard lock (notification + Popup buttons) and note persistence. Both are implemented and tested. The TODO.md tracks all subtasks including the unticked unit tests.
+❯ 测试了下，添加单词不再清空‘笔记’了。但是popup进入笔记的图标，在笔记为空和不为 
+  空时，颜色相差特别小。我建议为空时为淡色，不为空时给这个图标的背景填充比较明  
+  显的颜色以及合适的背景色                                                      
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● Update(app/src/main/java/com/mmjang/ankihelper/ui/popup/PopupActivity.java)
+  ⎿  Added 7 lines, removed 1 line
+      1728  
+      1729      private void updateNoteButtonUI() {
+      1730          boolean hasContent = mNoteEditedByUser != null && !mN
+            oteEditedByUser.isEmpty();
+      1731 -        mBtnEditNote.setAlpha(hasContent ? 1.0f : 0.6f);     
+      1731 +        if (hasContent) {                                    
+      1732 +            mBtnEditNote.setAlpha(1.0f);                     
+      1733 +            mBtnEditNote.setColorFilter(0xFFFF9800);         
+      1734 +        } else {                                             
+      1735 +            mBtnEditNote.setAlpha(0.4f);                     
+      1736 +            mBtnEditNote.clearColorFilter();                 
+      1737 +        }                                                    
+      1738      }
+      1739  
+      1740      private void showProgressBar() {
+
+● Bash(./gradlew assembleDebug 2>&1 | tail -5)
+  ⎿  Use '--warning-mode all' to show the individual deprecation warnings.
+     See https://docs.gradle.org/5.1.1/userguide/command_line_interface.htm
+     l#sec:command_line_warnings
+     … +3 lines (ctrl+o to expand)
+  ⎿  (timeout 5m)
+
+● 编译通过。效果对比：
+
+  ┌────────────┬────────────────────┬───────────────────────────────────────┐
+  │    状态    │        之前        │                 现在                  │
+  ├────────────┼────────────────────┼───────────────────────────────────────┤
+  │ 笔记为空   │ alpha              │ alpha 0.4f（更淡）                    │
+  │            │ 0.6f（半透明灰）   │                                       │
+  ├────────────┼────────────────────┼───────────────────────────────────────┤
+  │ 笔记有内容 │ alpha              │ alpha 1.0f +                          │
+  │            │ 1.0f（略微加深）   │ 橙色色调（0xFFFF9800，明显突出）      │
+  └────────────┴────────────────────┴───────────────────────────────────────┘
+
+  橙色调通过 setColorFilter 叠加在图标上，笔记为空时清除滤镜还原为默认灰色。可以
+  安装测试感受下视觉效果是否满意，颜色值可以再调。
+
+✻ Cooked for 48s
+
+※ recap: 实现了剪贴板锁定、Popup 状态保留、笔记持久化三个功能。当前笔记按钮的橙色色调已改完，重新安装测试看看视觉效果是否满意。
+
+❯ 很好，我测试了，需求已经实现并测试通过。现在帮我把                            
+  @TODO里的相关进度更新下，更新前先把需求点内容更正为现在的实际实现             
+
+● Update(TODO.md)
+  ⎿  Added 4 lines, removed 4 lines
+      15      - [x] 修复 CBWatcherService 独立进程导致 Settings 跨进程不
+          同步（移除 android:process=":CBService"）
+      16      - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁
+          定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到
+          端测试）
+      17  
+      18 -- [ ] [笔记持久化与笔记按钮 UI 状态指示](./docs/feature-plan/20
+         -26-0617-Note_Persistence_Plan.md)（2026-06-17 待开发）         
+      19 -    - [ ] PopupActivity.java：删除添加卡片成功后清空笔记的代码 
+         -（mNoteEditedByUser = ""）                                     
+      20 -    - [ ] PopupActivity.java：新增 updateNoteButtonUI() 根据笔 
+         -记内容调整按钮透明度（有空内容时 alpha 1.0，空时 0.6）         
+      21 -    - [ ] PopupActivity.java：在 setupEditNoteDialog() 确认回调
+         -和 onResume() 中调用 updateNoteButtonUI()                      
+      18 +- [x] [笔记持久化与笔记按钮 UI 状态指示](./docs/feature-plan/20
+         +26-0617-Note_Persistence_Plan.md)（2026-06-17 已完成）         
+      19 +    - [x] PopupActivity.java：删除添加卡片成功后清空笔记的代码 
+         +（mNoteEditedByUser = ""）                                     
+      20 +    - [x] PopupActivity.java：新增 updateNoteButtonUI() 方法， 
+         +有笔记内容时图标显示橙色色调+alpha 1.0，空时清色+alpha 0.4     
+      21 +    - [x] PopupActivity.java：在 setupEditNoteDialog() 确认回调
+         +、onResume()、添加卡片成功处调用 updateNoteButtonUI()          
+      22      - [ ] 功能实现完成后补充单元测试（覆盖笔记保存/恢复逻辑、按
+          钮状态同步）
+      23  
+      24  ### 问题分析
+
+● 已更新：
+
+  - 主项 [ ] → [x]，日期从「待开发」改为「已完成」
+  - 子项全部 [ ] → [x]
+  - 第二条「按钮透明度 0.6」修正为「橙色色调 + alpha 1.0 / 清色 + alpha
+  0.4」，和实际实现一致
+  - 单元测试条目保持 [ ] 未勾选
+
+✻ Baked for 10s
+
+❯ 好的我现在要手动提交当前更改，给我个合适的git信息                             
+
+● Bash(git status && echo "---" && git diff --stat)
+  ⎿  位于分支 250618_selection_filter
+     要提交的变更：
+       （使用 "git restore --staged <文件>..." 以取消暂存）
+     … +11 lines (ctrl+o to expand)
+
+● 参考近期的 commit 风格（feat: 前缀用于功能实现），建议：
+
+  推荐 commit message
+
+  feat: 添加卡片后保留笔记内容并增加笔记按钮视觉提示
+
+  - 删除添加卡片成功后清空笔记的代码，笔记跨卡片添加保留
+  - 新增 updateNoteButtonUI()，有笔记时图标显示橙色色调，空时淡化
+  - 在笔记确认、onResume、添加卡片后同步刷新笔记按钮状态
+
+  单行版本
+
+  feat: 实现笔记持久化和笔记按钮状态视觉提示
+
+✻ Cooked for 7s
+
+❯ /context 
+  ⎿  Context Usage
+     ⛀ ⛀ ⛀ ⛁ ⛁   deepseek-v4-flash[1m]
+     ⛁ ⛁ ⛁ ⛁ ⛁   207k/1m tokens (21%)
+     ⛁ ⛁ ⛁ ⛶ ⛶ 
+     ⛶ ⛶ ⛶ ⛶ ⛶   Estimated usage by category
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ System prompt: 5.8k tokens (0.6%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Memory files: 2.1k tokens (0.2%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Skills: 1.1k tokens (0.1%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛁ Messages: 198.1k tokens (19.8%)
+     ⛶ ⛶ ⛶ ⛶ ⛶   ⛶ Free space: 760k (76.0%)
+     ⛶ ⛶ ⛶ ⛝ ⛝   ⛝ Autocompact buffer: 33k tokens (3.3%)
+
+     Memory files · /memory
+     └ CLAUDE.md: 2.1k tokens
+
+     Skills · /skills
+
+     Built-in
+     ├ claude-api: ~250 tokens
+     ├ update-config: ~240 tokens
+     ├ run: ~120 tokens
+     ├ loop: ~100 tokens
+     ├ verify: ~90 tokens
+     ├ keybindings-help: ~80 tokens
+     ├ code-review: ~80 tokens
+     ├ fewer-permission-prompts: ~60 tokens
+     ├ security-review: ~30 tokens
+     ├ init: ~20 tokens
+     └ review: < 20 tokens

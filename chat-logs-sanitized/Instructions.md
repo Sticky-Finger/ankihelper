@@ -38,3 +38,19 @@
 - 结果：编译通过，手机测试验证词典和牌组选中长名称均可完整显示
 - 同步修复：牌组选择器 updateDeckSpinnerDisplay() 也改用 custom_spinner_item 布局
 - 更新文档：PlanEditor_Deck_Selector_Analysis.md 问题2状态标记为已解决；PROJECT_ANALYSIS.md 补充已解决问题记录
+
+# 剪切板查词通知栏常驻消息组件&PopupActivity 划词组件分析，以及相关需求实现
+> 此次任务使用的模型：glm-5.2[1m]、deepseek-v4-pro[1m]、deepseek-v4-flash[1m]、glm-4.7
+
+对话过程记录: [2026-06-17-115044-local-command-caveatcaveat-the-messages-below.txt](logs/2026-06-17-115044-local-command-caveatcaveat-the-messages-below.txt)
+
+- 生成文件
+    - 组件分析文件：
+        - 剪切板查词通知栏常驻消息组件分 [CBWatcherService_Clipboard_Notification_Analysis.md](../docs/component-analysis/CBWatcherService_Clipboard_Notification_Analysis.md)
+        - PopupActivity 划词组件分析 [PopupActivity_Word_Lookup_Analysis.md](../docs/component-analysis/PopupActivity_Word_Lookup_Analysis.md)
+        - 组件分析文档导航 [README.md](../docs/component-analysis/README.md)
+    - 开发需求文件：
+        - 需求列表 [TODO.md](../TODO.md)
+        - 需求实现计划：
+            - 剪贴板锁定 + PopupActivity 状态保留 [2026-0617-Clipboard_Lock_Plan.md](../docs/feature-plan/2026-0617-Clipboard_Lock_Plan.md)
+            - 笔记持久化与笔记按钮 UI 状态指示 [2026-0617-Note_Persistence_Plan.md](../docs/feature-plan/2026-0617-Note_Persistence_Plan.md)
