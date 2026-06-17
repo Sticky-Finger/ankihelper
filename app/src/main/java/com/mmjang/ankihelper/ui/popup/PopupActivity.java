@@ -266,6 +266,7 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
     protected void onResume() {
         super.onResume();
         updateLockButtonUI();
+        updateNoteButtonUI();
     }
 
     @Override
@@ -1367,7 +1368,7 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
                                                 PopupActivity.this, Utils.getResIdFromAttribute(PopupActivity.this, R.attr.icon_add_done)));
                                     }
                                     clearBigbangSelection();
-                                    mNoteEditedByUser = "";
+                                    updateNoteButtonUI();
                                     //attach the noteid to the button
                                     btnAddDefinition.setTag(R.id.TAG_NOTE_ID, result);
                                     //if there is a note id field in the model, update the note
@@ -1472,6 +1473,7 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
         dialogBuilder.setPositiveButton(R.string.dialog_ok, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int whichButton) {
                 mNoteEditedByUser = edt.getText().toString();
+                updateNoteButtonUI();
             }
         });
 //                        dialogBuilder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
@@ -1722,6 +1724,17 @@ public class PopupActivity extends Activity implements BigBangLayoutWrapper.Acti
         boolean locked = settings.getClipboardLocked();
         mBtnLock.setImageResource(locked ? R.drawable.ic_lock_closed : R.drawable.ic_lock_open);
         mBtnLock.setAlpha(locked ? 1.0f : 0.6f);
+    }
+
+    private void updateNoteButtonUI() {
+        boolean hasContent = mNoteEditedByUser != null && !mNoteEditedByUser.isEmpty();
+        if (hasContent) {
+            mBtnEditNote.setAlpha(1.0f);
+            mBtnEditNote.setColorFilter(0xFFFF9800);
+        } else {
+            mBtnEditNote.setAlpha(0.4f);
+            mBtnEditNote.clearColorFilter();
+        }
     }
 
     private void showProgressBar() {
