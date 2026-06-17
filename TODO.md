@@ -15,6 +15,12 @@
     - [x] 修复 CBWatcherService 独立进程导致 Settings 跨进程不同步（移除 android:process=":CBService"）
     - [ ] 功能实现完成后补充单元测试（引入 Robolectric；覆盖锁定判断逻辑、tags 序列化、状态保存/恢复、关键路径 Espresso 端到端测试）
 
+- [ ] [笔记持久化与笔记按钮 UI 状态指示](./docs/feature-plan/2026-0617-Note_Persistence_Plan.md)（2026-06-17 待开发）
+    - [ ] PopupActivity.java：删除添加卡片成功后清空笔记的代码（mNoteEditedByUser = ""）
+    - [ ] PopupActivity.java：新增 updateNoteButtonUI() 根据笔记内容调整按钮透明度（有空内容时 alpha 1.0，空时 0.6）
+    - [ ] PopupActivity.java：在 setupEditNoteDialog() 确认回调和 onResume() 中调用 updateNoteButtonUI()
+    - [ ] 功能实现完成后补充单元测试（覆盖笔记保存/恢复逻辑、按钮状态同步）
+
 ### 问题分析
 
 - [ ] ISSUE-[2026-0613-1134-OneClick_TwoCards_Cause_Analysis](./docs/bug-analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis/2026-0613-1134-OneClick_TwoCards_Cause_Analysis.md)
