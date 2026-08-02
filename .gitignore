@@ -66,3 +66,6 @@ chat-logs/**/.git
 keystore.properties
 *.jks
 *.keystore
+
+# Claude Code local settings
+.claude/

@@ -15,12 +15,15 @@ com.mmjang.ankihelper/                  # app/src/main/java/com/mmjang/ankihelpe
 ├── ui/                                 # 表示层 - 用户界面组件
 │   ├── popup/                          # 悬浮弹窗界面
 │   │   └── PopupActivity.java          # 单词选择和卡片创建主界面
-│   │       └── 划词组件（分词 + 词典查询 + 释义渲染） → PopupActivity_Word_Lookup_Analysis.md
-│   ├── LauncherActivity.java           # 主界面（位于 ui/ 根目录）             （暂无）
+│   │       ├── 划词组件（分词 + 词典查询 + 释义渲染） → PopupActivity_Word_Lookup_Analysis.md
+│   │       └── 添加卡片（modelId 透传） → NoteType_Model_Resolution_Analysis.md（路径 C 加卡点）
+│   ├── LauncherActivity.java           # 主界面（位于 ui/ 根目录）
+│   │   └── 添加默认方案入口            → NoteType_Model_Resolution_Analysis.md（路径 A 触发点）
 │   ├── plan/                           # 方案管理界面
 │   │   ├── PlanEditorActivity.java     # 方案编辑器
 │   │   │   ├── 牌组选择器              → PlanEditor_Deck_Selector_Analysis.md
-│   │   │   └── 词典选择器              → PlanEditor_Dictionary_Selector_Analysis.md
+│   │   │   ├── 词典选择器              → PlanEditor_Dictionary_Selector_Analysis.md
+│   │   │   └── 模板选择器（手动新建分支） → NoteType_Model_Resolution_Analysis.md（路径 B）
 │   │   └── PlansManagerActivity.java   # 方案列表管理                          （暂无）
 │   ├── customdict/                     # 自定义词典界面                        （暂无）
 │   ├── content/                        # 内容相关界面                          （暂无）
@@ -47,8 +50,10 @@ com.mmjang.ankihelper/                  # app/src/main/java/com/mmjang/ankihelpe
 │   │   └── ExternalDatabase.java
 │   ├── plan/                           # 输出方案配置
 │   │   ├── OutputPlan.java             # 卡片生成方案定义                      （暂无）
+│   │   │   └── outputModelId 字段      → NoteType_Model_Resolution_Analysis.md（持久化的模板 ID）
 │   │   ├── OutputPlanPOJO.java         # 方案数据传输对象                      （暂无）
-│   │   └── DefaultPlan.java            # 默认方案定义                          （暂无）
+│   │   └── DefaultPlan.java            # 默认方案定义
+│   │       └── getDefaultModelId()     → NoteType_Model_Resolution_Analysis.md（路径 A：按名查找 + 自动创建）
 │   ├── book/                           # 电子书相关                            （暂无）
 │   ├── model/                          # 数据模型                              （暂无）
 │   ├── content/                        # 内容管理                              （暂无）
@@ -58,7 +63,8 @@ com.mmjang.ankihelper/                  # app/src/main/java/com/mmjang/ankihelpe
 │   └── Settings.java                   # 全局配置单例（含剪切板查词开关）       （暂无）
 │
 ├── anki/                               # AnkiDroid API 集成
-│   └── AnkiDroidHelper.java            # AnkiDroid API 封装                    （暂无）
+│   └── AnkiDroidHelper.java            # AnkiDroid API 封装
+│       └── findModelIdByName()         → NoteType_Model_Resolution_Analysis.md（按名称查找 + 容忍重命名）
 │
 ├── util/                               # 工具类
 │   ├── Utils.java                      # 通用工具方法                          （暂无）
@@ -81,6 +87,7 @@ com.mmjang.ankihelper/                  # app/src/main/java/com/mmjang/ankihelpe
 | 2 | [PlanEditor_Dictionary_Selector_Analysis.md](./PlanEditor_Dictionary_Selector_Analysis.md) | 方案编辑器「词典」选择器 | `ui/plan/PlanEditorActivity.java` |
 | 3 | [CBWatcherService_Clipboard_Notification_Analysis.md](./CBWatcherService_Clipboard_Notification_Analysis.md) | 剪切板查词触发的下拉通知栏常驻消息 | `domain/CBWatcherService.java` |
 | 4 | [PopupActivity_Word_Lookup_Analysis.md](./PopupActivity_Word_Lookup_Analysis.md) | PopupActivity 划词组件（通知点击后的分词/查询/渲染主链路） | `ui/popup/PopupActivity.java` |
+| 5 | [NoteType_Model_Resolution_Analysis.md](./NoteType_Model_Resolution_Analysis.md) | 添加卡片时的模板（NoteType）选取逻辑：默认方案 / 手动新建 / 加卡三条路径 | `data/plan/DefaultPlan.java`、`ui/plan/PlanEditorActivity.java`、`ui/popup/PopupActivity.java`、`anki/AnkiDroidHelper.java`（跨组件业务逻辑） |
 
 ---
 
